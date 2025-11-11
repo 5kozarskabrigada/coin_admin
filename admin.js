@@ -1,12 +1,14 @@
-// Configuration
+// === CONFIGURATION - MUST BE AT THE VERY TOP ===
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
 
-// Supabase client
+// === INITIALIZE SUPABASE IMMEDIATELY ===
+console.log('Initializing Supabase client...');
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+console.log('Supabase client initialized:', !!supabase);
 
-// Global state
+// === GLOBAL STATE ===
 let currentUser = null;
 let currentSection = 'dashboard';
 let users = [];
@@ -14,7 +16,7 @@ let userLogs = [];
 let adminLogs = [];
 let transactions = [];
 
-// Pagination
+// === PAGINATION ===
 const itemsPerPage = 20;
 let currentPage = {
     users: 1,
@@ -23,7 +25,7 @@ let currentPage = {
     transactions: 1
 };
 
-// Sorting
+// === SORTING ===
 let sortConfig = {
     users: { field: 'user_id', direction: 'asc' },
     userLogs: { field: 'created_at', direction: 'desc' },
@@ -31,7 +33,7 @@ let sortConfig = {
     transactions: { field: 'created_at', direction: 'desc' }
 };
 
-// Initialize admin panel
+// === INITIALIZATION ===
 async function initAdminPanel() {
     await checkAuth();
     setupEventListeners();
@@ -41,7 +43,7 @@ async function initAdminPanel() {
     }
 }
 
-// Authentication
+// === AUTHENTICATION ===
 async function checkAuth() {
     const { data: { session }, error } = await supabase.auth.getSession();
 
@@ -108,7 +110,7 @@ function showAdminPanel() {
     document.getElementById('admin-panel').style.display = 'block';
 }
 
-// Navigation
+// === NAVIGATION ===
 function showSection(sectionName) {
     // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
@@ -148,7 +150,7 @@ function showSection(sectionName) {
     }
 }
 
-// Dashboard
+// === DASHBOARD ===
 async function loadDashboardStats() {
     try {
         const response = await fetch(`${BACKEND_URL}/admin/stats`, {
@@ -177,7 +179,7 @@ async function loadDashboardStats() {
     }
 }
 
-// Users Management
+// === USERS MANAGEMENT ===
 async function loadUsers(page = 1) {
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading users...</td></tr>';
@@ -243,10 +245,7 @@ function renderUsersTable() {
     `).join('');
 }
 
-
-
-
-// User Actions
+// === USER ACTIONS ===
 async function editUser(userId) {
     const user = users.find(u => u.user_id === userId);
     if (!user) return;
@@ -400,7 +399,7 @@ async function removeAdmin(userId) {
     }
 }
 
-// Logs Management
+// === LOGS MANAGEMENT ===
 async function loadUserLogs(page = 1) {
     const tbody = document.getElementById('user-logs-tbody');
     tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading user logs...</td></tr>';
@@ -425,7 +424,6 @@ async function loadUserLogs(page = 1) {
         tbody.innerHTML = `<tr><td colspan="5" class="error">Error loading user logs: ${error.message}</td></tr>`;
     }
 }
-
 
 function renderUserLogsTable() {
     const tbody = document.getElementById('user-logs-tbody');
@@ -491,7 +489,7 @@ function renderAdminLogsTable() {
     `).join('');
 }
 
-// Transactions
+// === TRANSACTIONS ===
 async function loadTransactions(page = 1) {
     const tbody = document.getElementById('transactions-tbody');
     tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading transactions...</td></tr>';
@@ -517,8 +515,6 @@ async function loadTransactions(page = 1) {
     }
 }
 
-
-
 function renderTransactionsTable() {
     const tbody = document.getElementById('transactions-tbody');
 
@@ -538,7 +534,7 @@ function renderTransactionsTable() {
     `).join('');
 }
 
-// Utility Functions
+// === UTILITY FUNCTIONS ===
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
@@ -549,7 +545,6 @@ function closeModal(modalId) {
 }
 
 function showNotification(message, type = 'info') {
-    // Create notification element
     const notification = document.createElement('div');
     notification.style.cssText = `
         position: fixed;
@@ -612,7 +607,7 @@ function renderPagination(type, totalCount, currentPage) {
     paginationElement.innerHTML = paginationHTML;
 }
 
-// Sorting functions
+// === SORTING FUNCTIONS ===
 function sortUsers(field) {
     if (sortConfig.users.field === field) {
         sortConfig.users.direction = sortConfig.users.direction === 'asc' ? 'desc' : 'asc';
@@ -653,7 +648,7 @@ function sortTransactions(field) {
     loadTransactions(currentPage.transactions);
 }
 
-// Search functions
+// === SEARCH FUNCTIONS ===
 function searchUsers() {
     const searchTerm = document.getElementById('user-search').value.toLowerCase();
     // Implement search logic here
@@ -678,7 +673,7 @@ function searchTransactions() {
     console.log('Search transactions:', searchTerm);
 }
 
-// Admin logging
+// === ADMIN LOGGING ===
 async function logAdminAction(actionType, targetUserId, details) {
     try {
         await supabase
@@ -694,7 +689,7 @@ async function logAdminAction(actionType, targetUserId, details) {
     }
 }
 
-// Event listeners
+// === EVENT LISTENERS ===
 function setupEventListeners() {
     // Enter key for login
     document.getElementById('password').addEventListener('keypress', (e) => {
@@ -704,5 +699,5 @@ function setupEventListeners() {
     });
 }
 
-// Initialize when page loads
+// === INITIALIZE WHEN PAGE LOADS ===
 document.addEventListener('DOMContentLoaded', initAdminPanel);
