@@ -627,6 +627,74 @@
                 font-size: 2.5rem;
             }
         }
+
+        /* Add to your existing CSS */
+textarea {
+    width: 100%;
+    padding: 1rem;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 100px;
+}
+
+select {
+    width: 100%;
+    padding: 1rem;
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.stat-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-accent), var(--secondary-accent));
+}
+
+.quick-actions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.btn-sm {
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+}
+
+/* Loading states */
+.loading {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Success/Error states */
+.status-success {
+    color: var(--success);
+}
+
+.status-error {
+    color: var(--danger);
+}
+
+.status-warning {
+    color: var(--warning);
+}
+
     </style>
 </head>
 
@@ -665,34 +733,65 @@
             </div>
 
             <!-- Dashboard Section -->
-            <div id="dashboard" class="section active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-users">0</div>
-                        <div class="stat-label">Total Users</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="total-clicks">0</div>
-                        <div class="stat-label">Total Clicks</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="active-today">0</div>
-                        <div class="stat-label">Active Today</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value" id="banned-users">0</div>
-                        <div class="stat-label">Banned Users</div>
-                    </div>
+        <!-- Enhanced Dashboard Section -->
+        <div id="dashboard" class="section active">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-users">0</div>
+                    <div class="stat-label">Total Users</div>
                 </div>
-
-                <div class="section-divider">Quick Actions</div>
-                <div class="quick-actions-grid">
-                    <button class="btn btn-warning btn-sm" onclick="refreshAllData()">Refresh All Data</button>
-                    <button class="btn btn-primary btn-sm" onclick="exportUserData()">Export User Data</button>
-                    <button class="btn btn-success btn-sm" onclick="showBackupModal()">Create Backup</button>
-                    <button class="btn btn-danger btn-sm" onclick="showMaintenanceModal()">Maintenance Mode</button>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-clicks">0</div>
+                    <div class="stat-label">Total Clicks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="active-today">0</div>
+                    <div class="stat-label">Active Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="banned-users">0</div>
+                    <div class="stat-label">Banned Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-transactions">0</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-coins">0</div>
+                    <div class="stat-label">Total Coins</div>
                 </div>
             </div>
+        
+            <div class="section-divider">Quick Actions</div>
+            <div class="quick-actions-grid">
+                <button class="btn btn-warning btn-sm" onclick="refreshAllData()">🔄 Refresh All Data</button>
+                <button class="btn btn-primary btn-sm" onclick="exportUserData()">📊 Export User Data</button>
+                <button class="btn btn-success btn-sm" onclick="showBackupModal()">💾 Create Backup</button>
+                <button class="btn btn-danger btn-sm" onclick="showMaintenanceModal()">🔧 Maintenance Mode</button>
+                <button class="btn btn-info btn-sm" onclick="showBroadcastModal()">📢 Broadcast Message</button>
+                <button class="btn btn-warning btn-sm" onclick="showMassActionModal()">⚡ Mass Actions</button>
+            </div>
+        
+            <div class="section-divider">Recent Activity</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Admin</th>
+                            <th>Action</th>
+                            <th>Target</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-activity-tbody">
+                        <tr>
+                            <td colspan="5" class="loading">Loading recent activity...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
             <!-- Users Management Section -->
             <div id="users" class="section">
@@ -847,6 +946,49 @@
             </div>
         </div>
     </div>
+
+    <!-- Broadcast Message Modal -->
+    <div id="broadcast-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📢 Broadcast Message</h3>
+                <button class="close-modal" onclick="closeModal('broadcast-modal')">&times;</button>
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea id="broadcast-message" placeholder="Enter message to broadcast to all users..."
+                    rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Message Type</label>
+                <select id="broadcast-type">
+                    <option value="info">ℹ️ Information</option>
+                    <option value="warning">⚠️ Warning</option>
+                    <option value="maintenance">🔧 Maintenance</option>
+                    <option value="update">🔄 Update</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="sendBroadcast()">Send Broadcast</button>
+        </div>
+    </div>
+    
+    <!-- Mass Actions Modal -->
+    <div id="mass-actions-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚡ Mass Actions</h3>
+                <button class="close-modal" onclick="closeModal('mass-actions-modal')">&times;</button>
+            </div>
+            <div class="quick-actions-grid">
+                <button class="btn btn-warning" onclick="massAddCoins()">💰 Add Coins to All</button>
+                <button class="btn btn-success" onclick="massResetUpgrades()">🔄 Reset All Upgrades</button>
+                <button class="btn btn-danger" onclick="massBanInactive()">🔨 Ban Inactive Users</button>
+                <button class="btn btn-info" onclick="massExportData()">📥 Export All Data</button>
+            </div>
+        </div>
+    </div>
+
+
 
     <script src="admin.js"></script>
 </body>
