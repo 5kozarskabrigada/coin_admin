@@ -205,35 +205,52 @@ function showSection(sectionName) {
 }
 
 
-// === DASHBOARD ===
+// Test different header names in your admin.js
 async function loadDashboardStats() {
     if (!currentUser) return;
 
     try {
-        console.log('🔄 Sending admin request...');
-        console.log('Current User ID:', currentUser.id);
-        console.log('Current User Object:', currentUser);
+        console.log('🔄 Testing different header names...');
 
-        const response = await fetch(`${BACKEND_URL}/admin/stats`, {
+        // Test 1: Original header name
+        const response1 = await fetch(`${BACKEND_URL}/admin/stats`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
                 'Admin-ID': currentUser.id
             }
         });
+        console.log('Test 1 (Admin-ID) status:', response1.status);
 
-        console.log('📊 Response status:', response.status);
-        console.log('📊 Response headers:', response.headers);
+        // Test 2: Lowercase header name
+        const response2 = await fetch(`${BACKEND_URL}/admin/stats`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'admin-id': currentUser.id
+            }
+        });
+        console.log('Test 2 (admin-id) status:', response2.status);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.log('❌ Error response:', errorText);
-            throw new Error(`Failed to fetch stats: ${response.status} ${errorText}`);
-        }
+        // Test 3: Different header name
+        const response3 = await fetch(`${BACKEND_URL}/admin/stats`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-id': currentUser.id
+            }
+        });
+        console.log('Test 3 (x-admin-id) status:', response3.status);
+
+        // Use the first successful response
+        const response = response1.ok ? response1 : response2.ok ? response2 : response3;
+
+        if (!response.ok) throw new Error('All header tests failed');
 
         const data = await response.json();
         console.log('✅ Stats data received:', data);
 
+        // Update UI...
         document.getElementById('total-users').textContent = data.totalUsers || 0;
         document.getElementById('total-clicks').textContent = data.totalClicks || 0;
         document.getElementById('active-today').textContent = data.activeToday || 0;
@@ -241,10 +258,7 @@ async function loadDashboardStats() {
 
     } catch (error) {
         console.error('❌ Error loading dashboard stats:', error);
-        document.getElementById('total-users').textContent = 'Error';
-        document.getElementById('total-clicks').textContent = 'Error';
-        document.getElementById('active-today').textContent = 'Error';
-        document.getElementById('banned-users').textContent = 'Error';
+        // Show error in UI...
     }
 }
 
