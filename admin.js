@@ -1,14 +1,10 @@
-// === CONFIGURATION - MUST BE AT THE VERY TOP ===
+// === CONFIGURATION ===
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
 
-// === INITIALIZE SUPABASE IMMEDIATELY ===
-console.log('Initializing Supabase client...');
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-console.log('Supabase client initialized:', !!supabase);
-
 // === GLOBAL STATE ===
+let supabaseClient = null;
 let currentUser = null;
 let currentSection = 'dashboard';
 let users = [];
@@ -35,57 +31,112 @@ let sortConfig = {
 
 // === INITIALIZATION ===
 async function initAdminPanel() {
+    console.log('Initializing admin panel...');
+
+    // Wait for Supabase to be available
+    if (typeof window.supabase === 'undefined') {
+        console.error('Supabase library not loaded');
+        showError('Supabase library failed to load. Please refresh the page.');
+        return;
+    }
+
+    // Initialize Supabase client
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log('Supabase client initialized:', !!supabaseClient);
+
     await checkAuth();
     setupEventListeners();
+
     if (currentUser) {
         loadDashboardStats();
         loadUsers();
     }
 }
 
+function showError(message) {
+    document.body.innerHTML = `
+        <div style="padding: 2rem; text-align: center; color: white;">
+            <h2>Error</h2>
+            <p>${message}</p>
+            <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: #8e44ad; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Refresh Page</button>
+        </div>
+    `;
+}
+
 // === AUTHENTICATION ===
 async function checkAuth() {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    if (!supabaseClient) {
+        console.error('Supabase client not initialized');
+        return;
+    }
 
-    if (session && session.user) {
-        // Check if user is admin
-        const { data: adminUser } = await supabase
-            .from('admin_users')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .single();
+    try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
 
-        if (adminUser && adminUser.is_active) {
+        if (error) {
+            console.error('Auth error:', error);
+            return;
+        }
+
+        if (session && session.user) {
+            // Check if user is admin
+            const { data: adminUser, error: adminError } = await supabaseClient
+                .from('admin_users')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .eq('is_active', true)
+                .single();
+
+            if (adminError || !adminUser) {
+                console.log('User is not an admin');
+                await logout();
+                return;
+            }
+
             currentUser = { ...session.user, ...adminUser };
             showAdminPanel();
-        } else {
-            await logout();
         }
+    } catch (error) {
+        console.error('Auth check failed:', error);
     }
 }
 
 async function login() {
+    if (!supabaseClient) {
+        showNotification('System not ready. Please refresh.', 'error');
+        return;
+    }
+
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const errorElement = document.getElementById('login-error');
 
+    if (!email || !password) {
+        errorElement.textContent = 'Please enter both email and password';
+        errorElement.style.display = 'block';
+        return;
+    }
+
     try {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password
+        errorElement.style.display = 'none';
+
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email.trim(),
+            password: password
         });
 
         if (error) throw error;
 
         // Verify admin privileges
-        const { data: adminUser } = await supabase
+        const { data: adminUser, error: adminError } = await supabaseClient
             .from('admin_users')
             .select('*')
             .eq('user_id', data.user.id)
+            .eq('is_active', true)
             .single();
 
-        if (!adminUser || !adminUser.is_active) {
-            throw new Error('Access denied. Not an admin.');
+        if (adminError || !adminUser) {
+            throw new Error('Access denied. Not an admin or account inactive.');
         }
 
         currentUser = { ...data.user, ...adminUser };
@@ -93,13 +144,16 @@ async function login() {
         await logAdminAction('login', null, 'Admin logged in');
 
     } catch (error) {
+        console.error('Login error:', error);
         errorElement.textContent = error.message;
         errorElement.style.display = 'block';
     }
 }
 
 async function logout() {
-    await supabase.auth.signOut();
+    if (supabaseClient) {
+        await supabaseClient.auth.signOut();
+    }
     currentUser = null;
     document.getElementById('login-section').style.display = 'flex';
     document.getElementById('admin-panel').style.display = 'none';
@@ -152,6 +206,8 @@ function showSection(sectionName) {
 
 // === DASHBOARD ===
 async function loadDashboardStats() {
+    if (!currentUser) return;
+
     try {
         const response = await fetch(`${BACKEND_URL}/admin/stats`, {
             method: 'GET',
@@ -181,6 +237,8 @@ async function loadDashboardStats() {
 
 // === USERS MANAGEMENT ===
 async function loadUsers(page = 1) {
+    if (!currentUser) return;
+
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading users...</td></tr>';
 
@@ -304,8 +362,6 @@ async function saveUserChanges(userId) {
 
         if (!response.ok) throw new Error('Failed to update user');
 
-        const data = await response.json();
-
         closeModal('edit-user-modal');
         loadUsers(currentPage.users);
         showNotification('User updated successfully', 'success');
@@ -401,6 +457,8 @@ async function removeAdmin(userId) {
 
 // === LOGS MANAGEMENT ===
 async function loadUserLogs(page = 1) {
+    if (!currentUser) return;
+
     const tbody = document.getElementById('user-logs-tbody');
     tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading user logs...</td></tr>';
 
@@ -445,6 +503,8 @@ function renderUserLogsTable() {
 }
 
 async function loadAdminLogs(page = 1) {
+    if (!currentUser) return;
+
     const tbody = document.getElementById('admin-logs-tbody');
     tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading admin logs...</td></tr>';
 
@@ -491,6 +551,8 @@ function renderAdminLogsTable() {
 
 // === TRANSACTIONS ===
 async function loadTransactions(page = 1) {
+    if (!currentUser) return;
+
     const tbody = document.getElementById('transactions-tbody');
     tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading transactions...</td></tr>';
 
@@ -570,11 +632,13 @@ function showNotification(message, type = 'info') {
     document.body.appendChild(notification);
 
     setTimeout(() => {
-        document.body.removeChild(notification);
+        if (notification.parentNode) {
+            document.body.removeChild(notification);
+        }
     }, 3000);
 }
 
-function renderPagination(type, totalCount, currentPage) {
+function renderPagination(type, totalCount, currentPageNum) {
     const totalPages = Math.ceil(totalCount / itemsPerPage);
     const paginationElement = document.getElementById(`${type}-pagination`);
 
@@ -586,13 +650,13 @@ function renderPagination(type, totalCount, currentPage) {
     let paginationHTML = '';
 
     // Previous button
-    if (currentPage > 1) {
-        paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPage - 1})">Previous</button>`;
+    if (currentPageNum > 1) {
+        paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">Previous</button>`;
     }
 
     // Page numbers
     for (let i = 1; i <= totalPages; i++) {
-        if (i === currentPage) {
+        if (i === currentPageNum) {
             paginationHTML += `<button class="page-btn active">${i}</button>`;
         } else {
             paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">${i}</button>`;
@@ -600,8 +664,8 @@ function renderPagination(type, totalCount, currentPage) {
     }
 
     // Next button
-    if (currentPage < totalPages) {
-        paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPage + 1})">Next</button>`;
+    if (currentPageNum < totalPages) {
+        paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">Next</button>`;
     }
 
     paginationElement.innerHTML = paginationHTML;
@@ -615,6 +679,7 @@ function sortUsers(field) {
         sortConfig.users.field = field;
         sortConfig.users.direction = 'asc';
     }
+    currentPage.users = 1;
     loadUsers(currentPage.users);
 }
 
@@ -625,6 +690,7 @@ function sortUserLogs(field) {
         sortConfig.userLogs.field = field;
         sortConfig.userLogs.direction = 'asc';
     }
+    currentPage.userLogs = 1;
     loadUserLogs(currentPage.userLogs);
 }
 
@@ -635,6 +701,7 @@ function sortAdminLogs(field) {
         sortConfig.adminLogs.field = field;
         sortConfig.adminLogs.direction = 'asc';
     }
+    currentPage.adminLogs = 1;
     loadAdminLogs(currentPage.adminLogs);
 }
 
@@ -645,6 +712,7 @@ function sortTransactions(field) {
         sortConfig.transactions.field = field;
         sortConfig.transactions.direction = 'asc';
     }
+    currentPage.transactions = 1;
     loadTransactions(currentPage.transactions);
 }
 
@@ -675,8 +743,10 @@ function searchTransactions() {
 
 // === ADMIN LOGGING ===
 async function logAdminAction(actionType, targetUserId, details) {
+    if (!supabaseClient || !currentUser) return;
+
     try {
-        await supabase
+        await supabaseClient
             .from('admin_logs')
             .insert({
                 admin_id: currentUser.id,
@@ -700,4 +770,7 @@ function setupEventListeners() {
 }
 
 // === INITIALIZE WHEN PAGE LOADS ===
-document.addEventListener('DOMContentLoaded', initAdminPanel);
+document.addEventListener('DOMContentLoaded', function () {
+    // Add a small delay to ensure Supabase is fully loaded
+    setTimeout(initAdminPanel, 100);
+});
