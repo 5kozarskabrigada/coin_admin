@@ -332,6 +332,7 @@ function renderUsersTable() {
 }
 
 // === USER ACTIONS ===
+// === USER ACTIONS ===
 async function editUser(userId) {
     const user = users.find(u => u.user_id === userId);
     if (!user) return;
@@ -346,6 +347,9 @@ async function editUser(userId) {
             <label>Username</label>
             <input type="text" id="edit-username" value="${user.username || ''}">
         </div>
+        
+        <div class="section-divider">Basic Stats</div>
+        
         <div class="form-group">
             <label>Score</label>
             <input type="text" id="edit-score" value="${user.score || '0'}">
@@ -358,13 +362,153 @@ async function editUser(userId) {
             <label>Auto Click Rate</label>
             <input type="text" id="edit-auto-click-rate" value="${user.auto_click_rate || '0'}">
         </div>
+        
+        <div class="section-divider">Quick Actions</div>
+        
+        <div class="quick-actions-grid">
+            <button class="btn btn-info btn-sm" onclick="resetUserScore('${user.user_id}')">Reset Score to 0</button>
+            <button class="btn btn-info btn-sm" onclick="showAddCoinsModal('${user.user_id}')">Add Coins</button>
+            <button class="btn btn-warning btn-sm" onclick="resetUserUpgrades('${user.user_id}')">Reset All Upgrades</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.user_id}')">Delete User</button>
+        </div>
+        
+        <div class="section-divider">Save Changes</div>
+        
         <div class="form-group">
-            <button class="btn btn-primary" onclick="saveUserChanges(${userId})">Save Changes</button>
+            <button class="btn btn-primary" onclick="saveUserChanges('${user.user_id}')">Save All Changes</button>
             <button class="btn btn-warning" onclick="closeModal('edit-user-modal')">Cancel</button>
         </div>
     `;
 
     document.getElementById('edit-user-modal').classList.add('active');
+}
+
+// Add Coins Modal
+function showAddCoinsModal(userId) {
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Add Coins to User</h3>
+            <div class="form-group">
+                <label>Amount to Add</label>
+                <input type="text" id="add-coins-amount" placeholder="0.000000100" value="0.000000100">
+            </div>
+            <div class="form-group">
+                <button class="btn btn-success" onclick="addCoinsToUser('${userId}')">Add Coins</button>
+                <button class="btn btn-warning" onclick="closeAddCoinsModal()">Cancel</button>
+            </div>
+        </div>
+    `;
+    modal.id = 'add-coins-modal';
+    document.body.appendChild(modal);
+}
+
+function closeAddCoinsModal() {
+    const modal = document.getElementById('add-coins-modal');
+    if (modal) {
+        document.body.removeChild(modal);
+    }
+}
+
+// New Action Functions
+async function resetUserScore(userId) {
+    if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Admin-ID': currentUser.id
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to reset user score');
+
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        showNotification('User score reset to 0', 'success');
+
+    } catch (error) {
+        showNotification(`Error resetting score: ${error.message}`, 'error');
+    }
+}
+
+async function addCoinsToUser(userId) {
+    const amount = document.getElementById('add-coins-amount').value;
+
+    if (!amount || new Decimal(amount).lessThanOrEqualTo(0)) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/add-coins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Admin-ID': currentUser.id
+            },
+            body: JSON.stringify({ amount })
+        });
+
+        if (!response.ok) throw new Error('Failed to add coins');
+
+        closeAddCoinsModal();
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        showNotification(`Added ${amount} coins to user`, 'success');
+
+    } catch (error) {
+        showNotification(`Error adding coins: ${error.message}`, 'error');
+    }
+}
+
+async function resetUserUpgrades(userId) {
+    if (!confirm('Are you sure you want to reset ALL upgrades for this user? This cannot be undone.')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-upgrades`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Admin-ID': currentUser.id
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to reset upgrades');
+
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        showNotification('All user upgrades reset', 'success');
+
+    } catch (error) {
+        showNotification(`Error resetting upgrades: ${error.message}`, 'error');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Admin-ID': currentUser.id
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to delete user');
+
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        showNotification('User deleted successfully', 'success');
+
+    } catch (error) {
+        showNotification(`Error deleting user: ${error.message}`, 'error');
+    }
 }
 
 async function saveUserChanges(userId) {

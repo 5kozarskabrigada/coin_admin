@@ -8,343 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="admin.css">
     <script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --bg-primary: #0f0d17;
-            --bg-surface-solid: #171622;
-            --primary-accent: #8e44ad;
-            --danger: #e74c3c;
-            --warning: #f39c12;
-            --success: #2ecc71;
-            --text-primary: #e6edf3;
-            --text-secondary: #8b949e;
-            --border-color: rgba(142, 68, 173, 0.25);
-            --border-radius: 0.5rem;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background: var(--bg-primary);
-            color: var(--text-primary);
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        /* Login Styles */
-        #login-section {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-
-        .login-form {
-            background: var(--bg-surface-solid);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .login-form h1 {
-            text-align: center;
-            margin-bottom: 2rem;
-            color: var(--primary-accent);
-        }
-
-        .form-group {
-            margin-bottom: 1rem;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            color: var(--text-secondary);
-        }
-
-        .form-group input {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.25rem;
-            color: var(--text-primary);
-            font-size: 1rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: var(--border-radius);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-primary {
-            background: var(--primary-accent);
-            color: white;
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background: #7d3c98;
-        }
-
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-
-        .btn-warning {
-            background: var(--warning);
-            color: white;
-        }
-
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .btn-sm {
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-        }
-
-        /* Admin Panel Styles */
-        #admin-panel {
-            display: none;
-        }
-
-        .admin-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 0;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 2rem;
-        }
-
-        .admin-nav {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .nav-btn {
-            padding: 1rem 1.5rem;
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s ease;
-        }
-
-        .nav-btn.active {
-            color: var(--primary-accent);
-            border-bottom-color: var(--primary-accent);
-        }
-
-        .section {
-            display: none;
-        }
-
-        .section.active {
-            display: block;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .stat-card {
-            background: var(--bg-surface-solid);
-            padding: 1.5rem;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-        }
-
-        .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-accent);
-        }
-
-        .stat-label {
-            color: var(--text-secondary);
-            font-size: 0.875rem;
-        }
-
-        .table-container {
-            background: var(--bg-surface-solid);
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-            overflow: hidden;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 1rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        th {
-            background: rgba(142, 68, 173, 0.1);
-            color: var(--text-primary);
-            font-weight: 600;
-            cursor: pointer;
-            user-select: none;
-        }
-
-        th:hover {
-            background: rgba(142, 68, 173, 0.2);
-        }
-
-        tr:hover {
-            background: rgba(142, 68, 173, 0.05);
-        }
-
-        .search-box {
-            margin-bottom: 1rem;
-        }
-
-        .search-box input {
-            width: 100%;
-            padding: 0.75rem;
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--border-radius);
-            color: var(--text-primary);
-        }
-
-        .pagination {
-            display: flex;
-            justify-content: center;
-            gap: 0.5rem;
-            margin-top: 1rem;
-        }
-
-        .page-btn {
-            padding: 0.5rem 1rem;
-            background: var(--bg-surface-solid);
-            border: 1px solid var(--border-color);
-            color: var(--text-primary);
-            cursor: pointer;
-            border-radius: 0.25rem;
-        }
-
-        .page-btn.active {
-            background: var(--primary-accent);
-            border-color: var(--primary-accent);
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: var(--bg-surface-solid);
-            padding: 2rem;
-            border-radius: var(--border-radius);
-            border: 1px solid var(--border-color);
-            width: 90%;
-            max-width: 500px;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .close-modal {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 1.5rem;
-            cursor: pointer;
-        }
-
-        .status-badge {
-            padding: 0.25rem 0.5rem;
-            border-radius: 1rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .status-active {
-            background: var(--success);
-            color: white;
-        }
-
-        .status-banned {
-            background: var(--danger);
-            color: white;
-        }
-
-        .status-admin {
-            background: var(--primary-accent);
-            color: white;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-        }
-
-        .error {
-            color: var(--danger);
-            text-align: center;
-            padding: 1rem;
-        }
-    </style>
 </head>
 
 <body>
@@ -401,6 +67,14 @@
                         <div class="stat-label">Banned Users</div>
                     </div>
                 </div>
+
+                <div class="section-divider">Quick Actions</div>
+                <div class="quick-actions-grid">
+                    <button class="btn btn-warning btn-sm" onclick="refreshAllData()">Refresh All Data</button>
+                    <button class="btn btn-primary btn-sm" onclick="exportUserData()">Export User Data</button>
+                    <button class="btn btn-success btn-sm" onclick="showBackupModal()">Create Backup</button>
+                    <button class="btn btn-danger btn-sm" onclick="showMaintenanceModal()">Maintenance Mode</button>
+                </div>
             </div>
 
             <!-- Users Management Section -->
@@ -415,6 +89,7 @@
                             <tr>
                                 <th onclick="sortUsers('user_id')">User ID</th>
                                 <th onclick="sortUsers('username')">Username</th>
+                                <th onclick="sortUsers('email')">Email</th>
                                 <th onclick="sortUsers('score')">Score</th>
                                 <th onclick="sortUsers('click_value')">Per Click</th>
                                 <th onclick="sortUsers('auto_click_rate')">Per Second</th>
@@ -526,6 +201,32 @@
             </div>
             <div id="edit-user-form">
                 <!-- Form will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Action Modals -->
+    <div id="backup-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Create Backup</h3>
+                <button class="close-modal" onclick="closeModal('backup-modal')">&times;</button>
+            </div>
+            <p>This will create a backup of all user data and logs.</p>
+            <button class="btn btn-success" onclick="createBackup()">Create Backup</button>
+        </div>
+    </div>
+
+    <div id="maintenance-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Maintenance Mode</h3>
+                <button class="close-modal" onclick="closeModal('maintenance-modal')">&times;</button>
+            </div>
+            <p>Enable maintenance mode? This will temporarily disable the game for all users.</p>
+            <div class="quick-actions-grid">
+                <button class="btn btn-warning" onclick="enableMaintenance()">Enable</button>
+                <button class="btn btn-success" onclick="disableMaintenance()">Disable</button>
             </div>
         </div>
     </div>
