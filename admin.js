@@ -568,7 +568,7 @@ function renderAdminLogsTable() {
     tbody.innerHTML = adminLogs.map(log => `
         <tr>
             <td>${log.admin_id}</td>
-            <td>${log.admin_users?.username || 'N/A'}</td>
+            <td>${log.admin_id === '71bf9556-b67f-4860-8219-270f32ccb89b' ? 'You' : log.admin_id}</td>
             <td>${log.action_type}</td>
             <td>${log.target_user_id || 'N/A'}</td>
             <td>${log.details}</td>
@@ -576,6 +576,7 @@ function renderAdminLogsTable() {
         </tr>
     `).join('');
 }
+
 
 // === TRANSACTIONS ===
 async function loadTransactions(page = 1) {
