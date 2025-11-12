@@ -204,11 +204,16 @@ function showSection(sectionName) {
     }
 }
 
+
 // === DASHBOARD ===
 async function loadDashboardStats() {
     if (!currentUser) return;
 
     try {
+        console.log('🔄 Sending admin request...');
+        console.log('Current User ID:', currentUser.id);
+        console.log('Current User Object:', currentUser);
+
         const response = await fetch(`${BACKEND_URL}/admin/stats`, {
             method: 'GET',
             headers: {
@@ -217,9 +222,17 @@ async function loadDashboardStats() {
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch stats');
+        console.log('📊 Response status:', response.status);
+        console.log('📊 Response headers:', response.headers);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.log('❌ Error response:', errorText);
+            throw new Error(`Failed to fetch stats: ${response.status} ${errorText}`);
+        }
 
         const data = await response.json();
+        console.log('✅ Stats data received:', data);
 
         document.getElementById('total-users').textContent = data.totalUsers || 0;
         document.getElementById('total-clicks').textContent = data.totalClicks || 0;
@@ -227,13 +240,14 @@ async function loadDashboardStats() {
         document.getElementById('banned-users').textContent = data.bannedUsers || 0;
 
     } catch (error) {
-        console.error('Error loading dashboard stats:', error);
+        console.error('❌ Error loading dashboard stats:', error);
         document.getElementById('total-users').textContent = 'Error';
         document.getElementById('total-clicks').textContent = 'Error';
         document.getElementById('active-today').textContent = 'Error';
         document.getElementById('banned-users').textContent = 'Error';
     }
 }
+
 
 // === USERS MANAGEMENT ===
 async function loadUsers(page = 1) {
