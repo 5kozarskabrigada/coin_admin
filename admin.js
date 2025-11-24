@@ -495,41 +495,45 @@ async function deleteUser(userId) {
 }
 
 async function saveUserChanges(userId) {
+    console.log("1. Save button clicked for user:", userId);
+
     const saveBtn = document.querySelector('#edit-user-form .btn-primary');
     const originalText = saveBtn.innerText;
     saveBtn.disabled = true;
     saveBtn.innerText = "Saving...";
 
     try {
-        // Helper to safely parse numbers
-        const getNum = (id) => {
+        // Helper to safely get values
+        const getValue = (id) => {
             const el = document.getElementById(id);
-            return el ? parseFloat(el.value) || 0 : 0;
+            if (!el) {
+                console.error(`Missing element with ID: ${id}`);
+                return null;
+            }
+            return el.value;
         };
 
-        // Helper to safely get text
-        const getStr = (id) => {
-            const el = document.getElementById(id);
-            return el ? el.value : "0";
-        };
-
+        // Collect data
         const updates = {
-            score: getStr('edit-score'), // Keep as string for Decimal precision
-            click_value: getStr('edit-click-value'),
-            auto_click_rate: getStr('edit-auto-rate'),
+            score: getValue('edit-score'),
+            click_value: getValue('edit-click-value'),
+            auto_click_rate: getValue('edit-auto-rate'),
 
-            click_tier_1_level: getNum('lvl-click-1'),
-            click_tier_2_level: getNum('lvl-click-2'),
-            click_tier_3_level: getNum('lvl-click-3'),
-            click_tier_4_level: getNum('lvl-click-4'),
-            click_tier_5_level: getNum('lvl-click-5'),
+            // Upgrades - default to 0 if empty
+            click_tier_1_level: parseInt(getValue('lvl-click-1')) || 0,
+            click_tier_2_level: parseInt(getValue('lvl-click-2')) || 0,
+            click_tier_3_level: parseInt(getValue('lvl-click-3')) || 0,
+            click_tier_4_level: parseInt(getValue('lvl-click-4')) || 0,
+            click_tier_5_level: parseInt(getValue('lvl-click-5')) || 0,
 
-            auto_tier_1_level: getNum('lvl-auto-1'),
-            auto_tier_2_level: getNum('lvl-auto-2'),
-            auto_tier_3_level: getNum('lvl-auto-3'),
-            auto_tier_4_level: getNum('lvl-auto-4'),
-            auto_tier_5_level: getNum('lvl-auto-5'),
+            auto_tier_1_level: parseInt(getValue('lvl-auto-1')) || 0,
+            auto_tier_2_level: parseInt(getValue('lvl-auto-2')) || 0,
+            auto_tier_3_level: parseInt(getValue('lvl-auto-3')) || 0,
+            auto_tier_4_level: parseInt(getValue('lvl-auto-4')) || 0,
+            auto_tier_5_level: parseInt(getValue('lvl-auto-5')) || 0,
         };
+
+        console.log("2. Sending payload:", updates);
 
         const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
             method: 'POST',
@@ -540,21 +544,29 @@ async function saveUserChanges(userId) {
             body: JSON.stringify(updates)
         });
 
+        console.log("3. Response status:", response.status);
+
         if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.error || 'Failed to update');
+            const errData = await response.json();
+            console.error("4. Server Error Details:", errData);
+            throw new Error(errData.error || `Server responded with ${response.status}`);
         }
+
+        const result = await response.json();
+        console.log("4. Success:", result);
 
         showNotification('✅ Saved successfully!', 'success');
         closeModal('edit-user-modal');
-        loadUsers(currentPage.users); // Refresh list to show new score
+        loadUsers(currentPage.users);
 
     } catch (error) {
-        console.error(error);
+        console.error("SAVE FAILED:", error);
         showNotification('❌ Error saving: ' + error.message, 'error');
     } finally {
-        saveBtn.disabled = false;
-        saveBtn.innerText = originalText;
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerText = originalText;
+        }
     }
 }
 
