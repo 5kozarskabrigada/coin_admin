@@ -503,23 +503,16 @@ async function saveUserChanges(userId) {
     saveBtn.innerText = "Saving...";
 
     try {
-        // Helper to safely get values
         const getValue = (id) => {
             const el = document.getElementById(id);
-            if (!el) {
-                console.error(`Missing element with ID: ${id}`);
-                return null;
-            }
-            return el.value;
+            return el ? el.value : null;
         };
 
-        // Collect data
         const updates = {
             score: getValue('edit-score'),
             click_value: getValue('edit-click-value'),
             auto_click_rate: getValue('edit-auto-rate'),
 
-            // Upgrades - default to 0 if empty
             click_tier_1_level: parseInt(getValue('lvl-click-1')) || 0,
             click_tier_2_level: parseInt(getValue('lvl-click-2')) || 0,
             click_tier_3_level: parseInt(getValue('lvl-click-3')) || 0,
@@ -548,7 +541,6 @@ async function saveUserChanges(userId) {
 
         if (!response.ok) {
             const errData = await response.json();
-            console.error("4. Server Error Details:", errData);
             throw new Error(errData.error || `Server responded with ${response.status}`);
         }
 
@@ -557,7 +549,14 @@ async function saveUserChanges(userId) {
 
         showNotification('✅ Saved successfully!', 'success');
         closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
+
+        // --- NEW: REFRESH ALL DATA SECTIONS ---
+        await loadUsers(currentPage.users);       // Updates the table behind the modal
+        await loadDashboardStats();               // Updates the "Recent Activity" list
+        if (currentSection === 'admin-logs') {    // If on logs tab, refresh it
+            await loadAdminLogs(currentPage.adminLogs);
+        }
+        // --------------------------------------
 
     } catch (error) {
         console.error("SAVE FAILED:", error);
