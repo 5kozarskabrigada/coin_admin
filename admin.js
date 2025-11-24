@@ -241,26 +241,40 @@ async function loadUsers(page = 1) {
 function renderUsersTable() {
     const tbody = document.getElementById('users-tbody');
 
-    if (users.length === 0) {
+    if (!users || users.length === 0) {
         tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
         return;
     }
 
-    tbody.innerHTML = users.map(user => `
+    tbody.innerHTML = users.map(user => {
+        let statusHtml = '';
+
+        if (user.is_banned === true) {
+            statusHtml += '<span class="status-badge status-banned">BANNED</span>';
+        } else {
+            statusHtml += '<span class="status-badge status-active">ACTIVE</span>';
+        }
+
+        if (user.is_admin === true) {
+            statusHtml += ' <span class="status-badge status-admin">ADMIN</span>';
+        }
+
+        return `
         <tr>
             <td>${user.user_id}</td>
             <td><strong>${user.username || 'N/A'}</strong></td>
-            <!-- FIXED: Shows 9 decimal places now -->
             <td>${new Decimal(user.score || 0).toFixed(9)}</td>
             <td>${new Decimal(user.click_value || 0).toFixed(9)}</td>
             <td>${new Decimal(user.auto_click_rate || 0).toFixed(9)}</td>
             <td>${user.last_updated ? new Date(user.last_updated).toLocaleString() : 'Never'}</td>
+            <td>${statusHtml}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editUser(${user.user_id})">Manage / Full Stats</button>
+                <button class="btn btn-sm btn-primary" onclick="editUser(${user.user_id})">Manage</button>
             </td>
         </tr>
-    `).join('');
+    `}).join('');
 }
+
 
 async function editUser(userId) {
     const user = users.find(u => u.user_id == userId);
@@ -268,74 +282,75 @@ async function editUser(userId) {
 
     const form = document.getElementById('edit-user-form');
 
-
     const getVal = (val) => new Decimal(val || 0).toFixed(9);
     const getLvl = (val) => val || 0;
 
+    const banButtonHtml = user.is_banned
+        ? `<button class="btn btn-success" onclick="unbanUser('${user.user_id}')" style="flex:1">✅ Unban User</button>`
+        : `<button class="btn btn-danger" onclick="banUser('${user.user_id}')" style="flex:1">🚫 Ban User</button>`;
+
     form.innerHTML = `
         <h3 class="modal-title" style="margin-bottom: 15px; border-bottom:1px solid #333; padding-bottom:10px;">
-            User: ${user.username || user.user_id}
+            Managing: <span style="color: var(--primary)">${user.username || user.user_id}</span>
         </h3>
 
-        <!-- --- SECTION 1: MAIN STATS --- -->
-        <div class="section-divider">General Stats</div>
-        
-        <label>Username (Read Only)</label>
-        <input type="text" value="${user.username || ''}" disabled style="opacity: 0.7; cursor: not-allowed;">
-
+        <!-- SECTION 1: EDIT STATS -->
+        <div class="section-divider">Stats Management</div>
         <div class="grid-2">
             <div>
-                <label>Total Score</label>
+                <label>Score</label>
                 <input type="text" id="edit-score" value="${getVal(user.score)}">
             </div>
             <div>
-                <label>Click Value (Power)</label>
+                <label>Click Value</label>
                 <input type="text" id="edit-click-value" value="${getVal(user.click_value)}">
             </div>
             <div>
-                <label>Auto Click Rate (Coins/Sec)</label>
+                <label>Auto Rate</label>
                 <input type="text" id="edit-auto-rate" value="${getVal(user.auto_click_rate)}">
             </div>
-        </div>
-
-        <!-- --- SECTION 2: UPGRADES (FULL STATS) --- -->
-        <div class="section-divider">Upgrade Levels (Inventory)</div>
-        
-        <div class="upgrade-section">
-            <div class="upgrade-title">Click Upgrades (Tiers 1-5)</div>
-            <div class="upgrade-grid">
-                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-click-1" value="${getLvl(user.click_tier_1_level)}"></div>
-                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-click-2" value="${getLvl(user.click_tier_2_level)}"></div>
-                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-click-3" value="${getLvl(user.click_tier_3_level)}"></div>
-                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-click-4" value="${getLvl(user.click_tier_4_level)}"></div>
-                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-click-5" value="${getLvl(user.click_tier_5_level)}"></div>
+            <div>
+                <label>Username (Locked)</label>
+                <input type="text" value="${user.username || ''}" disabled style="opacity:0.5">
             </div>
         </div>
 
-        <div class="upgrade-section">
-            <div class="upgrade-title">Auto Upgrades (Tiers 1-5)</div>
+        <!-- SECTION 2: UPGRADES -->
+        <div class="section-divider">Upgrade Levels</div>
+        <div class="upgrade-section" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
             <div class="upgrade-grid">
-                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-auto-1" value="${getLvl(user.auto_tier_1_level)}"></div>
-                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-auto-2" value="${getLvl(user.auto_tier_2_level)}"></div>
-                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-auto-3" value="${getLvl(user.auto_tier_3_level)}"></div>
-                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-auto-4" value="${getLvl(user.auto_tier_4_level)}"></div>
-                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-auto-5" value="${getLvl(user.auto_tier_5_level)}"></div>
+                <div class="upgrade-input"><label>Click T1</label><input type="number" id="lvl-click-1" value="${getLvl(user.click_tier_1_level)}"></div>
+                <div class="upgrade-input"><label>Click T2</label><input type="number" id="lvl-click-2" value="${getLvl(user.click_tier_2_level)}"></div>
+                <div class="upgrade-input"><label>Click T3</label><input type="number" id="lvl-click-3" value="${getLvl(user.click_tier_3_level)}"></div>
+                <div class="upgrade-input"><label>Click T4</label><input type="number" id="lvl-click-4" value="${getLvl(user.click_tier_4_level)}"></div>
+                <div class="upgrade-input"><label>Click T5</label><input type="number" id="lvl-click-5" value="${getLvl(user.click_tier_5_level)}"></div>
+                
+                <div class="upgrade-input"><label>Auto T1</label><input type="number" id="lvl-auto-1" value="${getLvl(user.auto_tier_1_level)}"></div>
+                <div class="upgrade-input"><label>Auto T2</label><input type="number" id="lvl-auto-2" value="${getLvl(user.auto_tier_2_level)}"></div>
+                <div class="upgrade-input"><label>Auto T3</label><input type="number" id="lvl-auto-3" value="${getLvl(user.auto_tier_3_level)}"></div>
+                <div class="upgrade-input"><label>Auto T4</label><input type="number" id="lvl-auto-4" value="${getLvl(user.auto_tier_4_level)}"></div>
+                <div class="upgrade-input"><label>Auto T5</label><input type="number" id="lvl-auto-5" value="${getLvl(user.auto_tier_5_level)}"></div>
             </div>
         </div>
 
-        <!-- OFFLINE TIERS CAN GO HERE SIMILARLY IF NEEDED -->
-
-        <button class="btn btn-primary" style="width:100%; margin-top:10px; padding:15px;" onclick="saveUserChanges('${user.user_id}')">
-            💾 Save Stats & Levels
+        <button class="btn btn-primary" style="width:100%; padding:12px; margin-bottom: 20px;" onclick="saveUserChanges('${user.user_id}')">
+            💾 Save Changes
         </button>
 
-        <!-- --- SECTION 3: ACTIONS --- -->
-        <div class="section-divider" style="margin-top:30px; color: var(--danger)">Danger Zone</div>
-        <div class="grid-2">
-            <button class="btn btn-danger" onclick="resetUserScore('${user.user_id}')">Reset Score 0</button>
-            <button class="btn btn-danger" onclick="deleteUser('${user.user_id}')">Delete User</button>
+        <!-- SECTION 3: DANGER / STATUS -->
+        <div class="section-divider" style="color: var(--danger); border-color: var(--danger)">Account Actions</div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            ${banButtonHtml}
+            <button class="btn" onclick="showAddCoinsModal('${user.user_id}')" style="flex:1">💰 Add Coins</button>
         </div>
-        <div style="text-align:right; margin-top:15px;">
+
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-danger" onclick="resetUserScore('${user.user_id}')" style="flex:1">Reset Score</button>
+            <button class="btn btn-danger" onclick="deleteUser('${user.user_id}')" style="flex:1">Delete</button>
+        </div>
+
+        <div style="text-align: right; margin-top: 20px;">
             <button class="btn" onclick="closeModal('edit-user-modal')">Close</button>
         </div>
     `;
