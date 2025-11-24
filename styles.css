@@ -41,7 +41,7 @@ body {
     padding: 1.5rem;
 }
 
-/* Login Styles */
+
 #login-section {
     display: flex;
     justify-content: center;
@@ -156,7 +156,7 @@ body {
     font-size: 0.875rem;
 }
 
-/* Admin Panel Styles */
+
 #admin-panel {
     display: none;
 }
@@ -512,7 +512,7 @@ tr:hover {
     font-weight: 600;
 }
 
-/* New Styles for Better Organization */
+
 .section-divider {
     margin: 2.5rem 0 1.5rem 0;
     padding: 1rem 1.5rem;
@@ -548,7 +548,7 @@ tr:hover {
     box-shadow: var(--shadow-lg);
 }
 
-/* Responsive Design */
+
 @media (max-width: 768px) {
     .container {
         padding: 1rem;

@@ -1,9 +1,7 @@
-// === CONFIGURATION ===
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
 
-// === GLOBAL STATE ===
 let supabaseClient = null;
 let currentUser = null;
 let currentSection = 'dashboard';
@@ -12,7 +10,6 @@ let userLogs = [];
 let adminLogs = [];
 let transactions = [];
 
-// === PAGINATION ===
 const itemsPerPage = 20;
 let currentPage = {
     users: 1,
@@ -21,7 +18,6 @@ let currentPage = {
     transactions: 1
 };
 
-// === SORTING ===
 let sortConfig = {
     users: { field: 'user_id', direction: 'asc' },
     userLogs: { field: 'created_at', direction: 'desc' },
@@ -29,18 +25,15 @@ let sortConfig = {
     transactions: { field: 'created_at', direction: 'desc' }
 };
 
-// === INITIALIZATION ===
 async function initAdminPanel() {
     console.log('Initializing admin panel...');
 
-    // Wait for Supabase to be available
     if (typeof window.supabase === 'undefined') {
         console.error('Supabase library not loaded');
         showError('Supabase library failed to load. Please refresh the page.');
         return;
     }
 
-    // Initialize Supabase client
     supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     console.log('Supabase client initialized:', !!supabaseClient);
 
@@ -63,7 +56,6 @@ function showError(message) {
     `;
 }
 
-// === AUTHENTICATION ===
 async function checkAuth() {
     if (!supabaseClient) {
         console.error('Supabase client not initialized');
@@ -79,7 +71,6 @@ async function checkAuth() {
         }
 
         if (session && session.user) {
-            // Check if user is admin
             const { data: adminUser, error: adminError } = await supabaseClient
                 .from('admin_users')
                 .select('*')
@@ -127,7 +118,6 @@ async function login() {
 
         if (error) throw error;
 
-        // Verify admin privileges
         const { data: adminUser, error: adminError } = await supabaseClient
             .from('admin_users')
             .select('*')
@@ -164,27 +154,19 @@ function showAdminPanel() {
     document.getElementById('admin-panel').style.display = 'block';
 }
 
-// === NAVIGATION ===
 function showSection(sectionName) {
-    // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
     });
 
-    // Remove active class from all nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    // Show selected section
     document.getElementById(sectionName).classList.add('active');
-
-    // Add active class to clicked nav button
     event.target.classList.add('active');
-
     currentSection = sectionName;
 
-    // Load section data
     switch (sectionName) {
         case 'dashboard':
             loadDashboardStats();
@@ -204,14 +186,11 @@ function showSection(sectionName) {
     }
 }
 
-
-// Test different header names in your admin.js
 async function loadDashboardStats() {
     if (!currentUser) return;
 
     try {
         console.log('🔄 Loading dashboard stats...');
-
         const response = await fetch(`${BACKEND_URL}/admin/stats`, {
             method: 'GET',
             headers: {
@@ -225,7 +204,6 @@ async function loadDashboardStats() {
         const data = await response.json();
         console.log('✅ Stats data received:', data);
 
-        // Update UI with new stats
         document.getElementById('total-users').textContent = data.totalUsers || 0;
         document.getElementById('total-clicks').textContent = data.totalClicks || 0;
         document.getElementById('active-today').textContent = data.activeToday || 0;
@@ -233,7 +211,6 @@ async function loadDashboardStats() {
         document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
         document.getElementById('total-coins').textContent = data.totalCoins || '0';
 
-        // Load recent activity
         await loadRecentActivity();
 
     } catch (error) {
@@ -242,17 +219,14 @@ async function loadDashboardStats() {
     }
 }
 
-
-
-// === USERS MANAGEMENT ===
 async function loadUsers(page = 1) {
     if (!currentUser) return;
-
+    const searchTerm = document.getElementById('user-search').value.toLowerCase();
     const tbody = document.getElementById('users-tbody');
     tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading users...</td></tr>';
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/users?page=${page}&limit=${itemsPerPage}`, {
+        const response = await fetch(`${BACKEND_URL}/admin/users?page=${page}&limit=${itemsPerPage}&search=${searchTerm}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -313,10 +287,8 @@ function renderUsersTable() {
 }
 
 
-// === USER ACTIONS ===
 async function editUser(userId) {
     console.log('Edit user called for:', userId);
-
     const user = users.find(u => u.user_id == userId);
     if (!user) {
         showNotification('❌ User not found', 'error');
@@ -381,7 +353,6 @@ async function editUser(userId) {
     document.getElementById('edit-user-modal').classList.add('active');
 }
 
-// Add Coins Modal
 function showAddCoinsModal(userId) {
     const modal = document.createElement('div');
     modal.className = 'modal active';
@@ -409,7 +380,7 @@ function closeAddCoinsModal() {
     }
 }
 
-// New Action Functions
+
 async function resetUserScore(userId) {
     if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
 
@@ -592,7 +563,6 @@ async function unbanUser(userId) {
     }
 }
 
-
 async function makeAdmin(userId) {
     if (!confirm(`Make user ${userId} an admin?`)) return;
 
@@ -647,8 +617,6 @@ async function removeAdmin(userId) {
     }
 }
 
-
-// === LOGS MANAGEMENT ===
 async function loadUserLogs(page = 1) {
     if (!currentUser) return;
 
@@ -742,8 +710,6 @@ function renderAdminLogsTable() {
     `).join('');
 }
 
-
-// === TRANSACTIONS ===
 async function loadTransactions(page = 1) {
     if (!currentUser) return;
 
@@ -790,7 +756,6 @@ function renderTransactionsTable() {
     `).join('');
 }
 
-// === UTILITY FUNCTIONS ===
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
@@ -846,12 +811,10 @@ function renderPagination(type, totalCount, currentPageNum) {
 
     let paginationHTML = '';
 
-    // Previous button
     if (currentPageNum > 1) {
         paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">Previous</button>`;
     }
 
-    // Page numbers
     for (let i = 1; i <= totalPages; i++) {
         if (i === currentPageNum) {
             paginationHTML += `<button class="page-btn active">${i}</button>`;
@@ -860,7 +823,6 @@ function renderPagination(type, totalCount, currentPageNum) {
         }
     }
 
-    // Next button
     if (currentPageNum < totalPages) {
         paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">Next</button>`;
     }
@@ -868,7 +830,6 @@ function renderPagination(type, totalCount, currentPageNum) {
     paginationElement.innerHTML = paginationHTML;
 }
 
-// === SORTING FUNCTIONS ===
 function sortUsers(field) {
     if (sortConfig.users.field === field) {
         sortConfig.users.direction = sortConfig.users.direction === 'asc' ? 'desc' : 'asc';
@@ -913,32 +874,26 @@ function sortTransactions(field) {
     loadTransactions(currentPage.transactions);
 }
 
-// === SEARCH FUNCTIONS ===
+// FIXED: Connected search inputs to the actual load functions
 function searchUsers() {
-    const searchTerm = document.getElementById('user-search').value.toLowerCase();
-    // Implement search logic here
-    console.log('Search users:', searchTerm);
+    currentPage.users = 1;
+    loadUsers(1);
 }
 
 function searchUserLogs() {
-    const searchTerm = document.getElementById('user-logs-search').value.toLowerCase();
-    // Implement search logic here
-    console.log('Search user logs:', searchTerm);
+    // Note: To implement searchUserLogs, backend support is needed (like users?search=)
+    // For now, it just logs, but you should add filtering in loadUserLogs similar to loadUsers
+    console.log('Search feature requires backend update for Logs');
 }
 
 function searchAdminLogs() {
-    const searchTerm = document.getElementById('admin-logs-search').value.toLowerCase();
-    // Implement search logic here
-    console.log('Search admin logs:', searchTerm);
+    console.log('Search feature requires backend update for Logs');
 }
 
 function searchTransactions() {
-    const searchTerm = document.getElementById('transactions-search').value.toLowerCase();
-    // Implement search logic here
-    console.log('Search transactions:', searchTerm);
+    console.log('Search feature requires backend update for Transactions');
 }
 
-// === ADMIN LOGGING ===
 async function logAdminAction(actionType, targetUserId, details) {
     if (!supabaseClient || !currentUser) return;
 
@@ -955,7 +910,6 @@ async function logAdminAction(actionType, targetUserId, details) {
         console.error('Error logging admin action:', error);
     }
 }
-
 
 async function refreshAllData() {
     if (!currentUser) return;
@@ -1021,7 +975,6 @@ function exportUserData() {
 
     showNotification('📊 Preparing data export...', 'info');
 
-    // Create CSV content
     let csvContent = "User ID,Username,Score,Per Click,Per Second,Last Active,Status\n";
 
     users.forEach(user => {
@@ -1038,7 +991,7 @@ function exportUserData() {
         csvContent += row + '\n';
     });
 
-    // Create and download file
+
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1072,10 +1025,8 @@ async function createBackup() {
     showNotification('💾 Creating backup...', 'info');
 
     try {
-        // Simulate backup process
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Log the backup action
         await logAdminAction('create_backup', null, 'System backup created');
 
         closeModal('backup-modal');
@@ -1088,7 +1039,6 @@ async function createBackup() {
 function enableMaintenance() {
     showNotification('🔧 Enabling maintenance mode...', 'warning');
 
-    // Simulate maintenance mode enable
     setTimeout(() => {
         closeModal('maintenance-modal');
         showNotification('✅ Maintenance mode enabled', 'success');
@@ -1099,7 +1049,6 @@ function enableMaintenance() {
 function disableMaintenance() {
     showNotification('🔧 Disabling maintenance mode...', 'info');
 
-    // Simulate maintenance mode disable
     setTimeout(() => {
         closeModal('maintenance-modal');
         showNotification('✅ Maintenance mode disabled', 'success');
@@ -1119,9 +1068,7 @@ async function sendBroadcast() {
     showNotification('📢 Sending broadcast...', 'info');
 
     try {
-        // Simulate broadcast sending
         await new Promise(resolve => setTimeout(resolve, 1500));
-
         await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
 
         closeModal('broadcast-modal');
@@ -1132,31 +1079,25 @@ async function sendBroadcast() {
     }
 }
 
-// Mass Actions
 function massAddCoins() {
     const amount = prompt('Enter amount to add to all users:');
     if (!amount) return;
-
     showNotification(`💰 Adding ${amount} coins to all users...`, 'info');
     closeModal('mass-actions-modal');
-    // Implementation would go here
 }
 
 function massResetUpgrades() {
     if (confirm('⚠️ Reset ALL upgrades for ALL users? This cannot be undone!')) {
         showNotification('🔄 Resetting all user upgrades...', 'warning');
         closeModal('mass-actions-modal');
-        // Implementation would go here
     }
 }
 
 function massBanInactive() {
     const days = prompt('Ban users inactive for how many days?', '30');
     if (!days) return;
-
     showNotification(`🔨 Banning users inactive for ${days} days...`, 'warning');
     closeModal('mass-actions-modal');
-    // Implementation would go here
 }
 
 function massExportData() {
@@ -1165,23 +1106,19 @@ function massExportData() {
     exportUserData();
 }
 
-// === EVENT LISTENERS ===
 function setupEventListeners() {
-    // Enter key for login
     document.getElementById('password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             login();
         }
     });
 
-    // Close modals when clicking outside
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('active');
         }
     });
 
-    // Escape key to close modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal.active').forEach(modal => {
@@ -1191,8 +1128,6 @@ function setupEventListeners() {
     });
 }
 
-// === INITIALIZE WHEN PAGE LOADS ===
 document.addEventListener('DOMContentLoaded', function () {
-    // Add a small delay to ensure Supabase is fully loaded
     setTimeout(initAdminPanel, 100);
 });

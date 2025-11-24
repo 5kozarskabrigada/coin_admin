@@ -57,7 +57,7 @@
             padding: 1.5rem;
         }
 
-        /* Login Styles */
+
         #login-section {
             display: flex;
             justify-content: center;
@@ -174,7 +174,6 @@
             font-size: 0.875rem;
         }
 
-        /* Admin Panel Styles */
         #admin-panel {
             display: none;
         }
@@ -531,7 +530,6 @@
             border: 2px solid var(--danger);
         }
 
-        /* New Styles for Better Organization */
         .section-divider {
             margin: 2.5rem 0 1.5rem 0;
             padding: 1rem 1.5rem;
@@ -569,7 +567,7 @@
             border-color: var(--primary-accent);
         }
 
-        /* Responsive Design */
+
         @media (max-width: 768px) {
             .container {
                 padding: 1rem;
@@ -628,7 +626,7 @@
             }
         }
 
-        /* Add to your existing CSS */
+
 textarea {
     width: 100%;
     padding: 1rem;
@@ -676,13 +674,13 @@ select {
     padding: 0.6rem 1rem;
 }
 
-/* Loading states */
+
 .loading {
     color: var(--text-secondary);
     font-style: italic;
 }
 
-/* Success/Error states */
+
 .status-success {
     color: var(--success);
 }
@@ -699,7 +697,6 @@ select {
 </head>
 
 <body>
-    <!-- Login Section -->
     <section id="login-section">
         <div class="login-form">
             <h1>Admin Login</h1>
@@ -716,7 +713,7 @@ select {
         </div>
     </section>
 
-    <!-- Admin Panel -->
+
     <section id="admin-panel">
         <div class="container">
             <div class="admin-header">
@@ -732,8 +729,6 @@ select {
                 <button class="nav-btn" onclick="showSection('transactions')">Transactions</button>
             </div>
 
-            <!-- Dashboard Section -->
-        <!-- Enhanced Dashboard Section -->
         <div id="dashboard" class="section active">
             <div class="stats-grid">
                 <div class="stat-card">
@@ -793,7 +788,6 @@ select {
             </div>
         </div>
 
-            <!-- Users Management Section -->
             <div id="users" class="section">
                 <div class="search-box">
                     <input type="text" id="user-search" placeholder="Search users by username, email, or user ID..."
@@ -814,17 +808,12 @@ select {
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="users-tbody">
-                            <!-- Users will be populated here -->
-                        </tbody>
+                        <tbody id="users-tbody"> </tbody>
                     </table>
                 </div>
-                <div class="pagination" id="users-pagination">
-                    <!-- Pagination will be populated here -->
-                </div>
+                <div class="pagination" id="users-pagination"></div>
             </div>
 
-            <!-- User Logs Section -->
             <div id="user-logs" class="section">
                 <div class="search-box">
                     <input type="text" id="user-logs-search" placeholder="Search user logs..."
@@ -842,16 +831,15 @@ select {
                             </tr>
                         </thead>
                         <tbody id="user-logs-tbody">
-                            <!-- User logs will be populated here -->
+
                         </tbody>
                     </table>
                 </div>
                 <div class="pagination" id="user-logs-pagination">
-                    <!-- Pagination will be populated here -->
+
                 </div>
             </div>
 
-            <!-- Admin Logs Section -->
             <div id="admin-logs" class="section">
                 <div class="search-box">
                     <input type="text" id="admin-logs-search" placeholder="Search admin logs..."
@@ -870,16 +858,13 @@ select {
                             </tr>
                         </thead>
                         <tbody id="admin-logs-tbody">
-                            <!-- Admin logs will be populated here -->
                         </tbody>
                     </table>
                 </div>
                 <div class="pagination" id="admin-logs-pagination">
-                    <!-- Pagination will be populated here -->
                 </div>
             </div>
 
-            <!-- Transactions Section -->
             <div id="transactions" class="section">
                 <div class="search-box">
                     <input type="text" id="transactions-search" placeholder="Search transactions..."
@@ -897,18 +882,16 @@ select {
                             </tr>
                         </thead>
                         <tbody id="transactions-tbody">
-                            <!-- Transactions will be populated here -->
                         </tbody>
                     </table>
                 </div>
                 <div class="pagination" id="transactions-pagination">
-                    <!-- Pagination will be populated here -->
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Edit User Modal -->
+
     <div id="edit-user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -916,12 +899,11 @@ select {
                 <button class="close-modal" onclick="closeModal('edit-user-modal')">&times;</button>
             </div>
             <div id="edit-user-form">
-                <!-- Form will be populated here -->
             </div>
         </div>
     </div>
 
-    <!-- Quick Action Modals -->
+
     <div id="backup-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -947,7 +929,7 @@ select {
         </div>
     </div>
 
-    <!-- Broadcast Message Modal -->
+
     <div id="broadcast-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -972,7 +954,7 @@ select {
         </div>
     </div>
     
-    <!-- Mass Actions Modal -->
+
     <div id="mass-actions-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
