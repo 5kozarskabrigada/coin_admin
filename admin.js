@@ -495,23 +495,40 @@ async function deleteUser(userId) {
 }
 
 async function saveUserChanges(userId) {
+    const saveBtn = document.querySelector('#edit-user-form .btn-primary');
+    const originalText = saveBtn.innerText;
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Saving...";
+
     try {
+        // Helper to safely parse numbers
+        const getNum = (id) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.value) || 0 : 0;
+        };
+
+        // Helper to safely get text
+        const getStr = (id) => {
+            const el = document.getElementById(id);
+            return el ? el.value : "0";
+        };
+
         const updates = {
-            score: document.getElementById('edit-score').value,
-            click_value: document.getElementById('edit-click-value').value,
-            auto_click_rate: document.getElementById('edit-auto-rate').value,
+            score: getStr('edit-score'), // Keep as string for Decimal precision
+            click_value: getStr('edit-click-value'),
+            auto_click_rate: getStr('edit-auto-rate'),
 
-            click_tier_1_level: parseInt(document.getElementById('lvl-click-1').value) || 0,
-            click_tier_2_level: parseInt(document.getElementById('lvl-click-2').value) || 0,
-            click_tier_3_level: parseInt(document.getElementById('lvl-click-3').value) || 0,
-            click_tier_4_level: parseInt(document.getElementById('lvl-click-4').value) || 0,
-            click_tier_5_level: parseInt(document.getElementById('lvl-click-5').value) || 0,
+            click_tier_1_level: getNum('lvl-click-1'),
+            click_tier_2_level: getNum('lvl-click-2'),
+            click_tier_3_level: getNum('lvl-click-3'),
+            click_tier_4_level: getNum('lvl-click-4'),
+            click_tier_5_level: getNum('lvl-click-5'),
 
-            auto_tier_1_level: parseInt(document.getElementById('lvl-auto-1').value) || 0,
-            auto_tier_2_level: parseInt(document.getElementById('lvl-auto-2').value) || 0,
-            auto_tier_3_level: parseInt(document.getElementById('lvl-auto-3').value) || 0,
-            auto_tier_4_level: parseInt(document.getElementById('lvl-auto-4').value) || 0,
-            auto_tier_5_level: parseInt(document.getElementById('lvl-auto-5').value) || 0,
+            auto_tier_1_level: getNum('lvl-auto-1'),
+            auto_tier_2_level: getNum('lvl-auto-2'),
+            auto_tier_3_level: getNum('lvl-auto-3'),
+            auto_tier_4_level: getNum('lvl-auto-4'),
+            auto_tier_5_level: getNum('lvl-auto-5'),
         };
 
         const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
@@ -523,15 +540,21 @@ async function saveUserChanges(userId) {
             body: JSON.stringify(updates)
         });
 
-        if (!response.ok) throw new Error('Failed to update user');
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error || 'Failed to update');
+        }
 
+        showNotification('✅ Saved successfully!', 'success');
         closeModal('edit-user-modal');
-        loadUsers(currentPage.users); 
-        showNotification('User stats updated successfully', 'success');
+        loadUsers(currentPage.users); // Refresh list to show new score
 
     } catch (error) {
         console.error(error);
-        showNotification('Error saving: ' + error.message, 'error');
+        showNotification('❌ Error saving: ' + error.message, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerText = originalText;
     }
 }
 
