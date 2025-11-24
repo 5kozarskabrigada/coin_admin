@@ -12,7 +12,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-    
     :root {
         --bg-body: #0f0d17;
         --bg-surface: #1a1625;
@@ -29,7 +28,6 @@
         --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     }
 
-    
     * {
         box-sizing: border-box;
         margin: 0;
@@ -44,7 +42,6 @@
         font-size: 14px;
     }
 
-    
     .container {
         max-width: 1200px;
         margin: 0 auto;
@@ -65,7 +62,6 @@
         color: var(--primary);
     }
 
-    
     .admin-nav {
         display: flex;
         gap: 10px;
@@ -73,7 +69,6 @@
         flex-wrap: wrap;
     }
 
-    
     .btn {
         display: inline-flex;
         align-items: center;
@@ -101,7 +96,6 @@
         border-color: var(--primary);
     }
 
-    
     .btn-primary {
         background: var(--primary);
         color: white;
@@ -115,7 +109,6 @@
         transform: translateY(-1px);
     }
 
-    
     .btn-danger {
         background: rgba(231, 76, 60, 0.1);
         color: var(--danger);
@@ -127,7 +120,6 @@
         color: white;
     }
 
-    
     .btn-success {
         background: rgba(46, 204, 113, 0.1);
         color: var(--success);
@@ -144,7 +136,6 @@
         font-size: 0.8rem;
     }
 
-    
     .form-group {
         margin-bottom: 15px;
     }
@@ -174,7 +165,6 @@
         border-color: var(--primary);
     }
 
-    
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -204,7 +194,6 @@
         letter-spacing: 0.5px;
     }
 
-    
     .table-container {
         background: var(--bg-surface);
         border-radius: var(--radius);
@@ -217,7 +206,6 @@
         width: 100%;
         border-collapse: collapse;
         min-width: 800px;
-        
     }
 
     th,
@@ -249,7 +237,6 @@
         background: var(--bg-hover);
     }
 
-    
     .status-badge {
         padding: 4px 8px;
         border-radius: 4px;
@@ -273,7 +260,6 @@
         color: var(--primary);
     }
 
-    
     .modal {
         display: none;
         position: fixed;
@@ -329,7 +315,6 @@
         color: var(--danger);
     }
 
-    
     .section-divider {
         margin: 20px 0 10px 0;
         padding-bottom: 5px;
@@ -353,7 +338,6 @@
         gap: 10px;
     }
 
-    
     #login-section {
         height: 100vh;
         display: flex;
@@ -370,7 +354,6 @@
         max-width: 400px;
     }
 
-    
     .section {
         display: none;
     }
@@ -470,9 +453,9 @@
                     <thead>
                         <tr>
                             <th>Time</th>
-                            <th>Admin</th>
+                            <th>Source</th>
+                            <th>Actor</th> 
                             <th>Action</th>
-                            <th>Target</th>
                             <th>Details</th>
                         </tr>
                     </thead>

@@ -190,32 +190,24 @@ async function loadDashboardStats() {
     if (!currentUser) return;
 
     try {
-        console.log('🔄 Loading dashboard stats...');
         const response = await fetch(`${BACKEND_URL}/admin/stats`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
-            }
+            headers: { 'Content-Type': 'application/json', 'Admin-ID': currentUser.id }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch dashboard stats');
-
+        if (!response.ok) throw new Error('Failed');
         const data = await response.json();
-        console.log('✅ Stats data received:', data);
 
         document.getElementById('total-users').textContent = data.totalUsers || 0;
-        document.getElementById('total-clicks').textContent = data.totalClicks || 0;
         document.getElementById('active-today').textContent = data.activeToday || 0;
         document.getElementById('banned-users').textContent = data.bannedUsers || 0;
         document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
-        document.getElementById('total-coins').textContent = data.totalCoins || '0';
+        document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
 
         await loadRecentActivity();
 
     } catch (error) {
-        console.error('❌ Error loading dashboard stats:', error);
-        showNotification(`❌ Error loading stats: ${error.message}`, 'error');
+        console.error(error);
     }
 }
 
@@ -248,9 +240,8 @@ async function loadUsers(page = 1) {
 
 function renderUsersTable() {
     const tbody = document.getElementById('users-tbody');
-
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="loading">No users found</td></tr>';
         return;
     }
 
@@ -261,11 +252,13 @@ function renderUsersTable() {
             <td>${new Decimal(user.score || 0).toFixed(4)}</td>
             <td>${new Decimal(user.click_value || 0).toFixed(6)}</td>
             <td>${new Decimal(user.auto_click_rate || 0).toFixed(6)}</td>
+            
+            <!-- FIXED DATE HERE -->
+            <td>${user.last_updated ? new Date(user.last_updated).toLocaleString() : 'Never'}</td>
+            
             <td>
-                ${user.is_banned ?
-            '<span class="badge badge-banned">Banned</span>' :
-            '<span class="badge badge-active">Active</span>'}
-                ${user.is_admin ? '<span class="badge" style="color:var(--accent)">Admin</span>' : ''}
+                ${user.is_banned ? '<span class="status-badge status-banned">Banned</span>' : '<span class="status-badge status-active">Active</span>'}
+                ${user.is_admin ? '<span class="status-badge status-admin">Admin</span>' : ''}
             </td>
             <td>
                 <button class="btn btn-sm" onclick="editUser(${user.user_id})">Manage</button>
@@ -914,41 +907,40 @@ async function refreshAllData() {
 
 async function loadRecentActivity() {
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/admin-logs?page=1&limit=10`, {
+        const response = await fetch(`${BACKEND_URL}/admin/combined-activity`, {
             method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
-            }
+            headers: { 'Content-Type': 'application/json', 'Admin-ID': currentUser.id }
         });
-
-        if (!response.ok) throw new Error('Failed to fetch recent activity');
 
         const data = await response.json();
         renderRecentActivity(data.logs || []);
-
     } catch (error) {
-        console.error('Error loading recent activity:', error);
+        console.error(error);
     }
 }
 
 function renderRecentActivity(logs) {
     const tbody = document.getElementById('recent-activity-tbody');
-
-    if (logs.length === 0) {
+    if (!logs.length) {
         tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
         return;
     }
 
-    tbody.innerHTML = logs.map(log => `
-        <tr>
-            <td>${formatDate(log.created_at)}</td>
-            <td>${log.admin_id === currentUser.id ? 'You' : log.admin_id}</td>
-            <td>${log.action_type}</td>
-            <td>${log.target_user_id || 'N/A'}</td>
-            <td>${log.details}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = logs.map(log => {
+        const badgeStyle = log.source === 'ADMIN'
+            ? 'background: rgba(46, 204, 113, 0.2); color: #2ecc71; padding: 2px 6px; border-radius: 4px; font-weight:bold; font-size:0.75rem;'
+            : 'background: rgba(142, 68, 173, 0.2); color: #9b59b6; padding: 2px 6px; border-radius: 4px; font-weight:bold; font-size:0.75rem;';
+
+        return `
+            <tr>
+                <td>${new Date(log.time).toLocaleString()}</td>
+                <td><span style="${badgeStyle}">${log.source}</span></td>
+                <td>${log.actor}</td>
+                <td>${log.action}</td>
+                <td style="color:#ccc; font-size:0.85rem">${log.details}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 
