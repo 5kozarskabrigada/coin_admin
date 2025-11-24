@@ -131,6 +131,68 @@
         color: white;
     }
 
+       .admin-nav {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 30px;
+        padding: 15px;
+        background: var(--bg-surface);
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        flex-wrap: wrap;
+    }
+
+    .nav-btn {
+        padding: 10px 20px;
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--text-secondary);
+        border-radius: var(--radius);
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+    }
+
+    .nav-btn:hover {
+        background: var(--bg-hover);
+        color: var(--text-primary);
+    }
+
+    .nav-btn.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.4);
+    }
+
+    .upgrade-section {
+        background: rgba(0,0,0,0.2);
+        padding: 15px;
+        border-radius: var(--radius);
+        margin-bottom: 15px;
+        border: 1px solid var(--border);
+    }
+    .upgrade-title {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 10px;
+        font-weight: bold;
+    }
+    .upgrade-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    .upgrade-input label {
+        font-size: 0.75rem;
+        margin-bottom: 2px;
+    }
+    .upgrade-input input {
+        padding: 6px;
+        font-size: 0.9rem;
+    }
+
     .btn-sm {
         padding: 6px 12px;
         font-size: 0.8rem;

@@ -240,8 +240,9 @@ async function loadUsers(page = 1) {
 
 function renderUsersTable() {
     const tbody = document.getElementById('users-tbody');
+
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="loading">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
         return;
     }
 
@@ -249,24 +250,17 @@ function renderUsersTable() {
         <tr>
             <td>${user.user_id}</td>
             <td><strong>${user.username || 'N/A'}</strong></td>
-            <td>${new Decimal(user.score || 0).toFixed(4)}</td>
-            <td>${new Decimal(user.click_value || 0).toFixed(6)}</td>
-            <td>${new Decimal(user.auto_click_rate || 0).toFixed(6)}</td>
-            
-            <!-- FIXED DATE HERE -->
+            <!-- FIXED: Shows 9 decimal places now -->
+            <td>${new Decimal(user.score || 0).toFixed(9)}</td>
+            <td>${new Decimal(user.click_value || 0).toFixed(9)}</td>
+            <td>${new Decimal(user.auto_click_rate || 0).toFixed(9)}</td>
             <td>${user.last_updated ? new Date(user.last_updated).toLocaleString() : 'Never'}</td>
-            
             <td>
-                ${user.is_banned ? '<span class="status-badge status-banned">Banned</span>' : '<span class="status-badge status-active">Active</span>'}
-                ${user.is_admin ? '<span class="status-badge status-admin">Admin</span>' : ''}
-            </td>
-            <td>
-                <button class="btn btn-sm" onclick="editUser(${user.user_id})">Manage</button>
+                <button class="btn btn-sm btn-primary" onclick="editUser(${user.user_id})">Manage / Full Stats</button>
             </td>
         </tr>
     `).join('');
 }
-
 
 async function editUser(userId) {
     const user = users.find(u => u.user_id == userId);
@@ -274,58 +268,81 @@ async function editUser(userId) {
 
     const form = document.getElementById('edit-user-form');
 
-    form.innerHTML = `
-        <h3 class="modal-title">Edit: ${user.username || user.user_id}</h3>
 
-        <!-- SECTION 1: Manual Edits -->
-        <label>Username</label>
-        <input type="text" id="edit-username" value="${user.username || ''}">
+    const getVal = (val) => new Decimal(val || 0).toFixed(9);
+    const getLvl = (val) => val || 0;
+
+    form.innerHTML = `
+        <h3 class="modal-title" style="margin-bottom: 15px; border-bottom:1px solid #333; padding-bottom:10px;">
+            User: ${user.username || user.user_id}
+        </h3>
+
+        <!-- --- SECTION 1: MAIN STATS --- -->
+        <div class="section-divider">General Stats</div>
+        
+        <label>Username (Read Only)</label>
+        <input type="text" value="${user.username || ''}" disabled style="opacity: 0.7; cursor: not-allowed;">
 
         <div class="grid-2">
             <div>
-                <label>Score (Coins)</label>
-                <input type="text" id="edit-score" value="${new Decimal(user.score).toFixed(9)}">
+                <label>Total Score</label>
+                <input type="text" id="edit-score" value="${getVal(user.score)}">
             </div>
             <div>
-                <label>Click Value</label>
-                <input type="text" id="edit-click-value" value="${new Decimal(user.click_value).toFixed(9)}">
+                <label>Click Value (Power)</label>
+                <input type="text" id="edit-click-value" value="${getVal(user.click_value)}">
+            </div>
+            <div>
+                <label>Auto Click Rate (Coins/Sec)</label>
+                <input type="text" id="edit-auto-rate" value="${getVal(user.auto_click_rate)}">
             </div>
         </div>
 
-        <button class="btn btn-primary" style="width:100%" onclick="saveUserChanges('${user.user_id}')">
-            Save Data Changes
+        <!-- --- SECTION 2: UPGRADES (FULL STATS) --- -->
+        <div class="section-divider">Upgrade Levels (Inventory)</div>
+        
+        <div class="upgrade-section">
+            <div class="upgrade-title">Click Upgrades (Tiers 1-5)</div>
+            <div class="upgrade-grid">
+                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-click-1" value="${getLvl(user.click_tier_1_level)}"></div>
+                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-click-2" value="${getLvl(user.click_tier_2_level)}"></div>
+                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-click-3" value="${getLvl(user.click_tier_3_level)}"></div>
+                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-click-4" value="${getLvl(user.click_tier_4_level)}"></div>
+                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-click-5" value="${getLvl(user.click_tier_5_level)}"></div>
+            </div>
+        </div>
+
+        <div class="upgrade-section">
+            <div class="upgrade-title">Auto Upgrades (Tiers 1-5)</div>
+            <div class="upgrade-grid">
+                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-auto-1" value="${getLvl(user.auto_tier_1_level)}"></div>
+                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-auto-2" value="${getLvl(user.auto_tier_2_level)}"></div>
+                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-auto-3" value="${getLvl(user.auto_tier_3_level)}"></div>
+                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-auto-4" value="${getLvl(user.auto_tier_4_level)}"></div>
+                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-auto-5" value="${getLvl(user.auto_tier_5_level)}"></div>
+            </div>
+        </div>
+
+        <!-- OFFLINE TIERS CAN GO HERE SIMILARLY IF NEEDED -->
+
+        <button class="btn btn-primary" style="width:100%; margin-top:10px; padding:15px;" onclick="saveUserChanges('${user.user_id}')">
+            💾 Save Stats & Levels
         </button>
 
-        <div class="divider"></div>
-
-        <!-- SECTION 2: Immediate Actions -->
-        <label>Management Actions</label>
+        <!-- --- SECTION 3: ACTIONS --- -->
+        <div class="section-divider" style="margin-top:30px; color: var(--danger)">Danger Zone</div>
         <div class="grid-2">
-            <button class="btn" onclick="showAddCoinsModal('${user.user_id}')">💰 Add Coins</button>
-            <button class="btn" onclick="resetUserScore('${user.user_id}')">🔄 Reset Score</button>
-            <button class="btn" onclick="resetUserUpgrades('${user.user_id}')">⚡ Reset Upgrades</button>
-            
-            ${user.is_banned ?
-            `<button class="btn btn-primary" onclick="unbanUser('${user.user_id}')">✅ Unban</button>` :
-            `<button class="btn btn-danger" onclick="banUser('${user.user_id}')">🔨 Ban User</button>`
-        }
+            <button class="btn btn-danger" onclick="resetUserScore('${user.user_id}')">Reset Score 0</button>
+            <button class="btn btn-danger" onclick="deleteUser('${user.user_id}')">Delete User</button>
         </div>
-        
-        <div style="margin-top: 10px; text-align: center;">
-             ${user.is_admin ?
-            `<button class="btn btn-danger btn-sm" onclick="removeAdmin('${user.user_id}')">Remove Admin</button>` :
-            `<button class="btn btn-sm" onclick="makeAdmin('${user.user_id}')">Make Admin</button>`
-        }
-             <button class="btn btn-danger btn-sm" style="margin-left:5px" onclick="deleteUser('${user.user_id}')">Delete User</button>
-        </div>
-
-        <div class="action-row">
-            <button class="btn" style="flex:1" onclick="closeModal('edit-user-modal')">Close</button>
+        <div style="text-align:right; margin-top:15px;">
+            <button class="btn" onclick="closeModal('edit-user-modal')">Close</button>
         </div>
     `;
 
     document.getElementById('edit-user-modal').classList.add('active');
 }
+
 
 
 function showAddCoinsModal(userId) {
@@ -456,34 +473,43 @@ async function deleteUser(userId) {
 }
 
 async function saveUserChanges(userId) {
-    const username = document.getElementById('edit-username').value;
-    const score = document.getElementById('edit-score').value;
-    const clickValue = document.getElementById('edit-click-value').value;
-    const autoClickRate = document.getElementById('edit-auto-click-rate').value;
-
     try {
+        const updates = {
+            score: document.getElementById('edit-score').value,
+            click_value: document.getElementById('edit-click-value').value,
+            auto_click_rate: document.getElementById('edit-auto-rate').value,
+
+            click_tier_1_level: parseInt(document.getElementById('lvl-click-1').value) || 0,
+            click_tier_2_level: parseInt(document.getElementById('lvl-click-2').value) || 0,
+            click_tier_3_level: parseInt(document.getElementById('lvl-click-3').value) || 0,
+            click_tier_4_level: parseInt(document.getElementById('lvl-click-4').value) || 0,
+            click_tier_5_level: parseInt(document.getElementById('lvl-click-5').value) || 0,
+
+            auto_tier_1_level: parseInt(document.getElementById('lvl-auto-1').value) || 0,
+            auto_tier_2_level: parseInt(document.getElementById('lvl-auto-2').value) || 0,
+            auto_tier_3_level: parseInt(document.getElementById('lvl-auto-3').value) || 0,
+            auto_tier_4_level: parseInt(document.getElementById('lvl-auto-4').value) || 0,
+            auto_tier_5_level: parseInt(document.getElementById('lvl-auto-5').value) || 0,
+        };
+
         const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Admin-ID': currentUser.id
             },
-            body: JSON.stringify({
-                username,
-                score,
-                click_value: clickValue,
-                auto_click_rate: autoClickRate
-            })
+            body: JSON.stringify(updates)
         });
 
         if (!response.ok) throw new Error('Failed to update user');
 
         closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
-        showNotification('User updated successfully', 'success');
+        loadUsers(currentPage.users); 
+        showNotification('User stats updated successfully', 'success');
 
     } catch (error) {
-        showNotification(`Error updating user: ${error.message}`, 'error');
+        console.error(error);
+        showNotification('Error saving: ' + error.message, 'error');
     }
 }
 
