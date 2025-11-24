@@ -316,22 +316,29 @@ async function editUser(userId) {
         </div>
 
         <!-- SECTION 2: UPGRADES -->
-        <div class="section-divider">Upgrade Levels</div>
-        <div class="upgrade-section" style="max-height: 150px; overflow-y: auto; margin-bottom: 15px;">
+         <div class="section-divider">Upgrade Levels (Inventory)</div>
+
+        <div class="upgrade-section">
+            <div class="upgrade-title">Click Upgrades (Tiers 1-5)</div>
             <div class="upgrade-grid">
-                <div class="upgrade-input"><label>Click T1</label><input type="number" id="lvl-click-1" value="${getLvl(user.click_tier_1_level)}"></div>
-                <div class="upgrade-input"><label>Click T2</label><input type="number" id="lvl-click-2" value="${getLvl(user.click_tier_2_level)}"></div>
-                <div class="upgrade-input"><label>Click T3</label><input type="number" id="lvl-click-3" value="${getLvl(user.click_tier_3_level)}"></div>
-                <div class="upgrade-input"><label>Click T4</label><input type="number" id="lvl-click-4" value="${getLvl(user.click_tier_4_level)}"></div>
-                <div class="upgrade-input"><label>Click T5</label><input type="number" id="lvl-click-5" value="${getLvl(user.click_tier_5_level)}"></div>
-                
-                <div class="upgrade-input"><label>Auto T1</label><input type="number" id="lvl-auto-1" value="${getLvl(user.auto_tier_1_level)}"></div>
-                <div class="upgrade-input"><label>Auto T2</label><input type="number" id="lvl-auto-2" value="${getLvl(user.auto_tier_2_level)}"></div>
-                <div class="upgrade-input"><label>Auto T3</label><input type="number" id="lvl-auto-3" value="${getLvl(user.auto_tier_3_level)}"></div>
-                <div class="upgrade-input"><label>Auto T4</label><input type="number" id="lvl-auto-4" value="${getLvl(user.auto_tier_4_level)}"></div>
-                <div class="upgrade-input"><label>Auto T5</label><input type="number" id="lvl-auto-5" value="${getLvl(user.auto_tier_5_level)}"></div>
+                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-click-1" value="${getLvl(user.click_tier_1_level)}"></div>
+                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-click-2" value="${getLvl(user.click_tier_2_level)}"></div>
+                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-click-3" value="${getLvl(user.click_tier_3_level)}"></div>
+                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-click-4" value="${getLvl(user.click_tier_4_level)}"></div>
+                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-click-5" value="${getLvl(user.click_tier_5_level)}"></div>
             </div>
         </div>
+
+        <div class="upgrade-section">
+            <div class="upgrade-title">Auto Upgrades (Tiers 1-5)</div>
+            <div class="upgrade-grid">
+                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-auto-1" value="${getLvl(user.auto_tier_1_level)}"></div>
+                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-auto-2" value="${getLvl(user.auto_tier_2_level)}"></div>
+                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-auto-3" value="${getLvl(user.auto_tier_3_level)}"></div>
+                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-auto-4" value="${getLvl(user.auto_tier_4_level)}"></div>
+                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-auto-5" value="${getLvl(user.auto_tier_5_level)}"></div>
+            </div>
+        </div>  
 
         <button class="btn btn-primary" style="width:100%; padding:12px; margin-bottom: 20px;" onclick="saveUserChanges('${user.user_id}')">
             💾 Save Changes
