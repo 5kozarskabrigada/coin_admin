@@ -250,37 +250,25 @@ function renderUsersTable() {
     const tbody = document.getElementById('users-tbody');
 
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="loading">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
         return;
     }
 
     tbody.innerHTML = users.map(user => `
         <tr>
             <td>${user.user_id}</td>
-            <td>${user.username || 'N/A'}</td>
-            <td>${new Decimal(user.score || 0).toFixed(9)}</td>
-            <td>${new Decimal(user.click_value || 0).toFixed(9)}</td>
-            <td>${new Decimal(user.auto_click_rate || 0).toFixed(9)}</td>
-            <td>${formatDate(user.last_updated)}</td>
+            <td><strong>${user.username || 'N/A'}</strong></td>
+            <td>${new Decimal(user.score || 0).toFixed(4)}</td>
+            <td>${new Decimal(user.click_value || 0).toFixed(6)}</td>
+            <td>${new Decimal(user.auto_click_rate || 0).toFixed(6)}</td>
             <td>
                 ${user.is_banned ?
-            '<span class="status-badge status-banned">Banned</span>' :
-            '<span class="status-badge status-active">Active</span>'
-        }
-                ${user.is_admin ?
-            '<span class="status-badge status-admin">Admin</span>' : ''
-        }
+            '<span class="badge badge-banned">Banned</span>' :
+            '<span class="badge badge-active">Active</span>'}
+                ${user.is_admin ? '<span class="badge" style="color:var(--accent)">Admin</span>' : ''}
             </td>
-            <td class="action-buttons">
-                <button class="btn btn-primary btn-sm" onclick="editUser(${user.user_id})">Edit</button>
-                ${user.is_banned ?
-            `<button class="btn btn-success btn-sm" onclick="unbanUser(${user.user_id})">Unban</button>` :
-            `<button class="btn btn-warning btn-sm" onclick="banUser(${user.user_id})">Ban</button>`
-        }
-                ${user.is_admin ?
-            `<button class="btn btn-warning btn-sm" onclick="removeAdmin(${user.user_id})">Remove Admin</button>` :
-            `<button class="btn btn-success btn-sm" onclick="makeAdmin(${user.user_id})">Make Admin</button>`
-        }
+            <td>
+                <button class="btn btn-sm" onclick="editUser(${user.user_id})">Manage</button>
             </td>
         </tr>
     `).join('');
@@ -288,70 +276,64 @@ function renderUsersTable() {
 
 
 async function editUser(userId) {
-    console.log('Edit user called for:', userId);
     const user = users.find(u => u.user_id == userId);
-    if (!user) {
-        showNotification('❌ User not found', 'error');
-        return;
-    }
+    if (!user) return;
 
     const form = document.getElementById('edit-user-form');
+
     form.innerHTML = `
-        <div class="form-group">
-            <label>User ID</label>
-            <input type="text" value="${user.user_id}" disabled>
+        <h3 class="modal-title">Edit: ${user.username || user.user_id}</h3>
+
+        <!-- SECTION 1: Manual Edits -->
+        <label>Username</label>
+        <input type="text" id="edit-username" value="${user.username || ''}">
+
+        <div class="grid-2">
+            <div>
+                <label>Score (Coins)</label>
+                <input type="text" id="edit-score" value="${new Decimal(user.score).toFixed(9)}">
+            </div>
+            <div>
+                <label>Click Value</label>
+                <input type="text" id="edit-click-value" value="${new Decimal(user.click_value).toFixed(9)}">
+            </div>
         </div>
-        <div class="form-group">
-            <label>Username</label>
-            <input type="text" id="edit-username" value="${user.username || ''}">
-        </div>
-        <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="edit-email" value="${user.email || ''}">
-        </div>
-        
-        <div class="section-divider">Basic Stats</div>
-        
-        <div class="form-group">
-            <label>Score</label>
-            <input type="text" id="edit-score" value="${user.score || '0'}">
-        </div>
-        <div class="form-group">
-            <label>Click Value</label>
-            <input type="text" id="edit-click-value" value="${user.click_value || '0'}">
-        </div>
-        <div class="form-group">
-            <label>Auto Click Rate</label>
-            <input type="text" id="edit-auto-click-rate" value="${user.auto_click_rate || '0'}">
-        </div>
-        
-        <div class="section-divider">Quick Actions</div>
-        
-        <div class="quick-actions-grid">
-            <button class="btn btn-info btn-sm" onclick="resetUserScore('${user.user_id}')">🔄 Reset Score to 0</button>
-            <button class="btn btn-info btn-sm" onclick="showAddCoinsModal('${user.user_id}')">💰 Add Coins</button>
-            <button class="btn btn-warning btn-sm" onclick="resetUserUpgrades('${user.user_id}')">⚡ Reset All Upgrades</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteUser('${user.user_id}')">🗑️ Delete User</button>
+
+        <button class="btn btn-primary" style="width:100%" onclick="saveUserChanges('${user.user_id}')">
+            Save Data Changes
+        </button>
+
+        <div class="divider"></div>
+
+        <!-- SECTION 2: Immediate Actions -->
+        <label>Management Actions</label>
+        <div class="grid-2">
+            <button class="btn" onclick="showAddCoinsModal('${user.user_id}')">💰 Add Coins</button>
+            <button class="btn" onclick="resetUserScore('${user.user_id}')">🔄 Reset Score</button>
+            <button class="btn" onclick="resetUserUpgrades('${user.user_id}')">⚡ Reset Upgrades</button>
+            
             ${user.is_banned ?
-            `<button class="btn btn-success btn-sm" onclick="unbanUser('${user.user_id}')">✅ Unban User</button>` :
-            `<button class="btn btn-warning btn-sm" onclick="banUser('${user.user_id}')">🔨 Ban User</button>`
-        }
-            ${user.is_admin ?
-            `<button class="btn btn-warning btn-sm" onclick="removeAdmin('${user.user_id}')">👑 Remove Admin</button>` :
-            `<button class="btn btn-success btn-sm" onclick="makeAdmin('${user.user_id}')">👑 Make Admin</button>`
+            `<button class="btn btn-primary" onclick="unbanUser('${user.user_id}')">✅ Unban</button>` :
+            `<button class="btn btn-danger" onclick="banUser('${user.user_id}')">🔨 Ban User</button>`
         }
         </div>
         
-        <div class="section-divider">Save Changes</div>
-        
-        <div class="form-group">
-            <button class="btn btn-primary" onclick="saveUserChanges('${user.user_id}')">💾 Save All Changes</button>
-            <button class="btn btn-warning" onclick="closeModal('edit-user-modal')">❌ Cancel</button>
+        <div style="margin-top: 10px; text-align: center;">
+             ${user.is_admin ?
+            `<button class="btn btn-danger btn-sm" onclick="removeAdmin('${user.user_id}')">Remove Admin</button>` :
+            `<button class="btn btn-sm" onclick="makeAdmin('${user.user_id}')">Make Admin</button>`
+        }
+             <button class="btn btn-danger btn-sm" style="margin-left:5px" onclick="deleteUser('${user.user_id}')">Delete User</button>
+        </div>
+
+        <div class="action-row">
+            <button class="btn" style="flex:1" onclick="closeModal('edit-user-modal')">Close</button>
         </div>
     `;
 
     document.getElementById('edit-user-modal').classList.add('active');
 }
+
 
 function showAddCoinsModal(userId) {
     const modal = document.createElement('div');
