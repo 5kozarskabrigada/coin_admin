@@ -25,6 +25,19 @@ let sortConfig = {
     transactions: { field: 'created_at', direction: 'desc' }
 };
 
+
+const authenticateAdmin = (req, res, next) => {
+  const token = req.headers['x-admin-secret'];
+  const expected = process.env.ADMIN_SECRET;
+
+  if (!expected || token !== expected) {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+
+  req.admin = { user_id: 'admin-panel' };
+  next();
+};
+
 async function initAdminPanel() {
     console.log('Initializing admin panel...');
 
