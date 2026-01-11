@@ -563,13 +563,12 @@ async function saveUserChanges(userId) {
         showNotification('✅ Saved successfully!', 'success');
         closeModal('edit-user-modal');
 
-        // --- NEW: REFRESH ALL DATA SECTIONS ---
-        await loadUsers(currentPage.users);       // Updates the table behind the modal
-        await loadDashboardStats();               // Updates the "Recent Activity" list
-        if (currentSection === 'admin-logs') {    // If on logs tab, refresh it
+  
+        await loadUsers(currentPage.users);      
+        await loadDashboardStats();             
+        if (currentSection === 'admin-logs') { 
             await loadAdminLogs(currentPage.adminLogs);
         }
-        // --------------------------------------
 
     } catch (error) {
         console.error("SAVE FAILED:", error);
@@ -944,15 +943,13 @@ function sortTransactions(field) {
     loadTransactions(currentPage.transactions);
 }
 
-// FIXED: Connected search inputs to the actual load functions
 function searchUsers() {
     currentPage.users = 1;
     loadUsers(1);
 }
 
 function searchUserLogs() {
-    // Note: To implement searchUserLogs, backend support is needed (like users?search=)
-    // For now, it just logs, but you should add filtering in loadUserLogs similar to loadUsers
+
     console.log('Search feature requires backend update for Logs');
 }
 
