@@ -1,6 +1,7 @@
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
+const ADMIN_SECRET = 'your-admin-secret-here'; // Replace with your actual admin secret
 
 let supabaseClient = null;
 let currentUser = null;
@@ -25,50 +26,69 @@ let sortConfig = {
     transactions: { field: 'created_at', direction: 'desc' }
 };
 
+let currentEditingUserId = null;
+let debounceTimer = null;
 
-const authenticateAdmin = (req, res, next) => {
-  const token = req.headers['x-admin-secret'];
-  const expected = process.env.ADMIN_SECRET;
-
-  if (!expected || token !== expected) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-
-  req.admin = { user_id: 'admin-panel' };
-  next();
-};
-
+// Initialize Admin Panel
 async function initAdminPanel() {
-    console.log('Initializing admin panel...');
-
-    if (typeof window.supabase === 'undefined') {
-        console.error('Supabase library not loaded');
-        showError('Supabase library failed to load. Please refresh the page.');
-        return;
-    }
-
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log('Supabase client initialized:', !!supabaseClient);
-
-    await checkAuth();
-    setupEventListeners();
-
-    if (currentUser) {
-        loadDashboardStats();
-        loadUsers();
+    try {
+        console.log('Initializing admin panel...');
+        
+        // Initialize Supabase
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        console.log('Supabase client initialized');
+        
+        // Check authentication
+        await checkAuth();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Initialize dashboard if user is logged in
+        if (currentUser) {
+            loadDashboardStats();
+            loadUsers();
+        }
+        
+    } catch (error) {
+        console.error('Failed to initialize admin panel:', error);
+        showError('Failed to initialize admin panel. Please refresh the page.');
     }
 }
 
+// Show error page
 function showError(message) {
     document.body.innerHTML = `
-        <div style="padding: 2rem; text-align: center; color: white;">
-            <h2>Error</h2>
-            <p>${message}</p>
-            <button onclick="location.reload()" style="padding: 0.5rem 1rem; background: #8e44ad; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Refresh Page</button>
+        <div style="
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: var(--dark);
+            color: var(--text);
+            text-align: center;
+            padding: 2rem;
+        ">
+            <h2 style="color: var(--danger); margin-bottom: 1rem;">Error</h2>
+            <p style="margin-bottom: 2rem; color: var(--text-secondary);">${message}</p>
+            <button onclick="location.reload()" style="
+                padding: 0.75rem 1.5rem;
+                background: var(--primary);
+                color: white;
+                border: none;
+                border-radius: 0.5rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            ">
+                Refresh Page
+            </button>
         </div>
     `;
 }
 
+// Check authentication
 async function checkAuth() {
     if (!supabaseClient) {
         console.error('Supabase client not initialized');
@@ -79,11 +99,12 @@ async function checkAuth() {
         const { data: { session }, error } = await supabaseClient.auth.getSession();
 
         if (error) {
-            console.error('Auth error:', error);
+            console.error('Auth session error:', error);
             return;
         }
 
         if (session && session.user) {
+            // Verify admin access
             const { data: adminUser, error: adminError } = await supabaseClient
                 .from('admin_users')
                 .select('*')
@@ -98,6 +119,8 @@ async function checkAuth() {
             }
 
             currentUser = { ...session.user, ...adminUser };
+            document.getElementById('admin-name').textContent = 
+                currentUser.email || currentUser.user_id;
             showAdminPanel();
         }
     } catch (error) {
@@ -105,6 +128,7 @@ async function checkAuth() {
     }
 }
 
+// Login function
 async function login() {
     if (!supabaseClient) {
         showNotification('System not ready. Please refresh.', 'error');
@@ -131,6 +155,7 @@ async function login() {
 
         if (error) throw error;
 
+        // Verify admin access
         const { data: adminUser, error: adminError } = await supabaseClient
             .from('admin_users')
             .select('*')
@@ -143,43 +168,71 @@ async function login() {
         }
 
         currentUser = { ...data.user, ...adminUser };
+        document.getElementById('admin-name').textContent = 
+            currentUser.email || currentUser.user_id;
         showAdminPanel();
+        showNotification('Login successful!', 'success');
+
+        // Log admin action
         await logAdminAction('login', null, 'Admin logged in');
 
     } catch (error) {
         console.error('Login error:', error);
         errorElement.textContent = error.message;
         errorElement.style.display = 'block';
+        showNotification('Login failed: ' + error.message, 'error');
     }
 }
 
+// Logout function
 async function logout() {
-    if (supabaseClient) {
-        await supabaseClient.auth.signOut();
+    try {
+        if (supabaseClient) {
+            await supabaseClient.auth.signOut();
+        }
+        currentUser = null;
+        document.getElementById('login-section').style.display = 'flex';
+        document.getElementById('admin-panel').style.display = 'none';
+        showNotification('Logged out successfully', 'info');
+    } catch (error) {
+        console.error('Logout error:', error);
+        showNotification('Logout failed', 'error');
     }
-    currentUser = null;
-    document.getElementById('login-section').style.display = 'flex';
-    document.getElementById('admin-panel').style.display = 'none';
 }
 
+// Show admin panel
 function showAdminPanel() {
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
 }
 
+// Show section
 function showSection(sectionName) {
+    // Hide all sections
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
     });
 
+    // Remove active class from all nav buttons
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    document.getElementById(sectionName).classList.add('active');
-    event.target.classList.add('active');
+    // Show selected section
+    const sectionElement = document.getElementById(sectionName);
+    if (sectionElement) {
+        sectionElement.classList.add('active');
+    }
+
+    // Add active class to clicked button
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+
+    // Update current section
     currentSection = sectionName;
 
+    // Load section data
     switch (sectionName) {
         case 'dashboard':
             loadDashboardStats();
@@ -199,63 +252,109 @@ function showSection(sectionName) {
     }
 }
 
+// Load dashboard stats
 async function loadDashboardStats() {
     if (!currentUser) return;
 
     try {
         const response = await fetch(`${BACKEND_URL}/admin/stats`, {
             method: 'GET',
-            headers: { 'Content-Type': 'application/json', 'Admin-ID': currentUser.id }
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
         });
 
-        if (!response.ok) throw new Error('Failed');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+
         const data = await response.json();
 
+        // Update stats
         document.getElementById('total-users').textContent = data.totalUsers || 0;
         document.getElementById('active-today').textContent = data.activeToday || 0;
         document.getElementById('banned-users').textContent = data.bannedUsers || 0;
         document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
         document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
 
+        // Update API status
+        document.getElementById('api-status').textContent = 'Online';
+        document.getElementById('api-status-indicator').classList.add('online');
+
+        // Load recent activity
         await loadRecentActivity();
 
     } catch (error) {
-        console.error(error);
+        console.error('Error loading dashboard stats:', error);
+        showNotification('Failed to load dashboard data', 'error');
+        
+        // Update API status to offline
+        document.getElementById('api-status').textContent = 'Offline';
+        document.getElementById('api-status-indicator').classList.remove('online');
     }
 }
 
+// Load users with pagination and search
 async function loadUsers(page = 1) {
     if (!currentUser) return;
-    const searchTerm = document.getElementById('user-search').value.toLowerCase();
+    
+    const searchTerm = document.getElementById('user-search')?.value || '';
     const tbody = document.getElementById('users-tbody');
+    
+    if (!tbody) return;
+    
     tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading users...</td></tr>';
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/users?page=${page}&limit=${itemsPerPage}&search=${searchTerm}`, {
+        const url = new URL(`${BACKEND_URL}/admin/users`);
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', itemsPerPage);
+        if (searchTerm) {
+            url.searchParams.set('search', searchTerm);
+        }
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch users');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to fetch users: ${response.status}`);
+        }
 
         const data = await response.json();
         users = data.users || [];
+        
+        // Update current page
+        currentPage.users = page;
+        
+        // Render users table
         renderUsersTable();
-        renderPagination('users', data.totalCount, page);
+        
+        // Render pagination
+        renderPagination('users', data.totalCount || 0, page);
 
     } catch (error) {
+        console.error('Error loading users:', error);
         tbody.innerHTML = `<tr><td colspan="8" class="error">Error loading users: ${error.message}</td></tr>`;
+        showNotification('Failed to load users', 'error');
     }
 }
 
+// Render users table
 function renderUsersTable() {
     const tbody = document.getElementById('users-tbody');
+    
+    if (!tbody) return;
 
     if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="loading">No users found</td></tr>';
         return;
     }
 
@@ -282,156 +381,181 @@ function renderUsersTable() {
             <td>${user.last_updated ? new Date(user.last_updated).toLocaleString() : 'Never'}</td>
             <td>${statusHtml}</td>
             <td>
-                <button class="btn btn-sm btn-primary" onclick="editUser(${user.user_id})">Manage</button>
+                <button class="btn btn-sm btn-primary" onclick="editUser('${user.user_id}')">
+                    <span>⚙️</span> Manage
+                </button>
             </td>
         </tr>
-    `}).join('');
+        `;
+    }).join('');
 }
 
-
+// Edit user modal
 async function editUser(userId) {
     const user = users.find(u => u.user_id == userId);
-    if (!user) return;
+    if (!user) {
+        showNotification('User not found', 'error');
+        return;
+    }
+
+    currentEditingUserId = userId;
 
     const form = document.getElementById('edit-user-form');
+    if (!form) return;
 
     const getVal = (val) => new Decimal(val || 0).toFixed(9);
     const getLvl = (val) => val || 0;
 
     const banButtonHtml = user.is_banned
-        ? `<button class="btn btn-success" onclick="unbanUser('${user.user_id}')" style="flex:1">✅ Unban User</button>`
-        : `<button class="btn btn-danger" onclick="banUser('${user.user_id}')" style="flex:1">🚫 Ban User</button>`;
+        ? `<button class="btn btn-success" onclick="unbanUser('${user.user_id}')">
+            <span>✅</span> Unban User
+          </button>`
+        : `<button class="btn btn-danger" onclick="banUser('${user.user_id}')">
+            <span>🚫</span> Ban User
+          </button>`;
 
     form.innerHTML = `
-        <h3 class="modal-title" style="margin-bottom: 15px; border-bottom:1px solid #333; padding-bottom:10px;">
-            Managing: <span style="color: var(--primary)">${user.username || user.user_id}</span>
-        </h3>
+        <div class="modal-body">
+            <h3 class="section-title" style="margin-top: 0;">
+                Managing: <span class="highlight">${user.username || user.user_id}</span>
+            </h3>
 
-        <!-- SECTION 1: EDIT STATS -->
-        <div class="section-divider">Stats Management</div>
-        <div class="grid-2">
-            <div>
-                <label>Score</label>
-                <input type="text" id="edit-score" value="${getVal(user.score)}">
+            <!-- Basic Information -->
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="text" class="form-control" value="${user.user_id}" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" class="form-control" value="${user.username || ''}" disabled>
+                </div>
             </div>
-            <div>
-                <label>Click Value</label>
-                <input type="text" id="edit-click-value" value="${getVal(user.click_value)}">
+
+            <!-- Stats Management -->
+            <h4 class="section-title">Stats Management</h4>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Score</label>
+                    <input type="text" id="edit-score" class="form-control" value="${getVal(user.score)}">
+                </div>
+                <div class="form-group">
+                    <label>Click Value</label>
+                    <input type="text" id="edit-click-value" class="form-control" value="${getVal(user.click_value)}">
+                </div>
+                <div class="form-group">
+                    <label>Auto Click Rate</label>
+                    <input type="text" id="edit-auto-rate" class="form-control" value="${getVal(user.auto_click_rate)}">
+                </div>
+                <div class="form-group">
+                    <label>Last Updated</label>
+                    <input type="text" class="form-control" 
+                           value="${user.last_updated ? new Date(user.last_updated).toLocaleString() : 'Never'}" 
+                           disabled>
+                </div>
             </div>
-            <div>
-                <label>Auto Rate</label>
-                <input type="text" id="edit-auto-rate" value="${getVal(user.auto_click_rate)}">
+
+            <!-- Upgrade Levels -->
+            <h4 class="section-title">Upgrade Levels</h4>
+            
+            <div class="upgrade-section">
+                <div class="upgrade-title">Click Upgrades (Tiers 1-5)</div>
+                <div class="upgrade-grid">
+                    <div class="upgrade-input">
+                        <label>Tier 1</label>
+                        <input type="number" id="lvl-click-1" class="form-control" value="${getLvl(user.click_tier_1_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 2</label>
+                        <input type="number" id="lvl-click-2" class="form-control" value="${getLvl(user.click_tier_2_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 3</label>
+                        <input type="number" id="lvl-click-3" class="form-control" value="${getLvl(user.click_tier_3_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 4</label>
+                        <input type="number" id="lvl-click-4" class="form-control" value="${getLvl(user.click_tier_4_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 5</label>
+                        <input type="number" id="lvl-click-5" class="form-control" value="${getLvl(user.click_tier_5_level)}">
+                    </div>
+                </div>
             </div>
-            <div>
-                <label>Username (Locked)</label>
-                <input type="text" value="${user.username || ''}" disabled style="opacity:0.5">
+
+            <div class="upgrade-section">
+                <div class="upgrade-title">Auto Upgrades (Tiers 1-5)</div>
+                <div class="upgrade-grid">
+                    <div class="upgrade-input">
+                        <label>Tier 1</label>
+                        <input type="number" id="lvl-auto-1" class="form-control" value="${getLvl(user.auto_tier_1_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 2</label>
+                        <input type="number" id="lvl-auto-2" class="form-control" value="${getLvl(user.auto_tier_2_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 3</label>
+                        <input type="number" id="lvl-auto-3" class="form-control" value="${getLvl(user.auto_tier_3_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 4</label>
+                        <input type="number" id="lvl-auto-4" class="form-control" value="${getLvl(user.auto_tier_4_level)}">
+                    </div>
+                    <div class="upgrade-input">
+                        <label>Tier 5</label>
+                        <input type="number" id="lvl-auto-5" class="form-control" value="${getLvl(user.auto_tier_5_level)}">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <h4 class="section-title">Quick Actions</h4>
+            <div style="display: grid; gap: 10px; margin-bottom: 20px;">
+                ${banButtonHtml}
+                <button class="btn btn-warning" onclick="showAddCoinsModal()">
+                    <span>💰</span> Add Coins
+                </button>
+                <button class="btn btn-danger" onclick="resetUserScore('${user.user_id}')">
+                    <span>🔄</span> Reset Score
+                </button>
+                <button class="btn btn-danger" onclick="deleteUser('${user.user_id}')">
+                    <span>🗑️</span> Delete User
+                </button>
             </div>
         </div>
 
-        <!-- SECTION 2: UPGRADES -->
-         <div class="section-divider">Upgrade Levels (Inventory)</div>
-
-        <div class="upgrade-section">
-            <div class="upgrade-title">Click Upgrades (Tiers 1-5)</div>
-            <div class="upgrade-grid">
-                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-click-1" value="${getLvl(user.click_tier_1_level)}"></div>
-                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-click-2" value="${getLvl(user.click_tier_2_level)}"></div>
-                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-click-3" value="${getLvl(user.click_tier_3_level)}"></div>
-                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-click-4" value="${getLvl(user.click_tier_4_level)}"></div>
-                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-click-5" value="${getLvl(user.click_tier_5_level)}"></div>
-            </div>
-        </div>
-
-        <div class="upgrade-section">
-            <div class="upgrade-title">Auto Upgrades (Tiers 1-5)</div>
-            <div class="upgrade-grid">
-                <div class="upgrade-input"><label>Tier 1</label><input type="number" id="lvl-auto-1" value="${getLvl(user.auto_tier_1_level)}"></div>
-                <div class="upgrade-input"><label>Tier 2</label><input type="number" id="lvl-auto-2" value="${getLvl(user.auto_tier_2_level)}"></div>
-                <div class="upgrade-input"><label>Tier 3</label><input type="number" id="lvl-auto-3" value="${getLvl(user.auto_tier_3_level)}"></div>
-                <div class="upgrade-input"><label>Tier 4</label><input type="number" id="lvl-auto-4" value="${getLvl(user.auto_tier_4_level)}"></div>
-                <div class="upgrade-input"><label>Tier 5</label><input type="number" id="lvl-auto-5" value="${getLvl(user.auto_tier_5_level)}"></div>
-            </div>
-        </div>  
-
-        <button class="btn btn-primary" style="width:100%; padding:12px; margin-bottom: 20px;" onclick="saveUserChanges('${user.user_id}')">
-            💾 Save Changes
-        </button>
-
-        <!-- SECTION 3: DANGER / STATUS -->
-        <div class="section-divider" style="color: var(--danger); border-color: var(--danger)">Account Actions</div>
-        
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            ${banButtonHtml}
-            <button class="btn" onclick="showAddCoinsModal('${user.user_id}')" style="flex:1">💰 Add Coins</button>
-        </div>
-
-        <div style="display: flex; gap: 10px;">
-            <button class="btn btn-danger" onclick="resetUserScore('${user.user_id}')" style="flex:1">Reset Score</button>
-            <button class="btn btn-danger" onclick="deleteUser('${user.user_id}')" style="flex:1">Delete</button>
-        </div>
-
-        <div style="text-align: right; margin-top: 20px;">
-            <button class="btn" onclick="closeModal('edit-user-modal')">Close</button>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="saveUserChanges()">
+                <span>💾</span> Save Changes
+            </button>
+            <button class="btn btn-outline" onclick="closeModal('edit-user-modal')">
+                Cancel
+            </button>
         </div>
     `;
 
     document.getElementById('edit-user-modal').classList.add('active');
 }
 
-
-
-function showAddCoinsModal(userId) {
-    const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.innerHTML = `
-        <div class="modal-content">
-            <h3>Add Coins to User</h3>
-            <div class="form-group">
-                <label>Amount to Add</label>
-                <input type="text" id="add-coins-amount" placeholder="0.000000100" value="0.000000100">
-            </div>
-            <div class="form-group">
-                <button class="btn btn-success" onclick="addCoinsToUser('${userId}')">Add Coins</button>
-                <button class="btn btn-warning" onclick="closeAddCoinsModal()">Cancel</button>
-            </div>
-        </div>
-    `;
-    modal.id = 'add-coins-modal';
-    document.body.appendChild(modal);
+// Show add coins modal
+function showAddCoinsModal() {
+    document.getElementById('add-coins-modal').classList.add('active');
 }
 
+// Close add coins modal
 function closeAddCoinsModal() {
-    const modal = document.getElementById('add-coins-modal');
-    if (modal) {
-        document.body.removeChild(modal);
-    }
+    document.getElementById('add-coins-modal').classList.remove('active');
 }
 
-
-async function resetUserScore(userId) {
-    if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
-
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
-            }
-        });
-
-        if (!response.ok) throw new Error('Failed to reset user score');
-
-        closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
-        showNotification('User score reset to 0', 'success');
-
-    } catch (error) {
-        showNotification(`Error resetting score: ${error.message}`, 'error');
+// Add coins to user
+async function addCoinsToUser() {
+    if (!currentEditingUserId) {
+        showNotification('No user selected', 'error');
+        return;
     }
-}
 
-async function addCoinsToUser(userId) {
     const amount = document.getElementById('add-coins-amount').value;
 
     if (!amount || new Decimal(amount).lessThanOrEqualTo(0)) {
@@ -440,27 +564,59 @@ async function addCoinsToUser(userId) {
     }
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/add-coins`, {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}/add-coins`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             },
             body: JSON.stringify({ amount })
         });
 
-        if (!response.ok) throw new Error('Failed to add coins');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to add coins');
+        }
 
-        closeAddCoinsModal();
-        closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
         showNotification(`Added ${amount} coins to user`, 'success');
+        closeModal('add-coins-modal');
+        loadUsers(currentPage.users);
 
     } catch (error) {
-        showNotification(`Error adding coins: ${error.message}`, 'error');
+        console.error('Error adding coins:', error);
+        showNotification(`Failed to add coins: ${error.message}`, 'error');
     }
 }
 
+// Reset user score
+async function resetUserScore(userId) {
+    if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to reset user score');
+        }
+
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        showNotification('User score reset to 0', 'success');
+
+    } catch (error) {
+        console.error('Error resetting score:', error);
+        showNotification(`Failed to reset score: ${error.message}`, 'error');
+    }
+}
+
+// Reset user upgrades
 async function resetUserUpgrades(userId) {
     if (!confirm('Are you sure you want to reset ALL upgrades for this user? This cannot be undone.')) return;
 
@@ -469,21 +625,26 @@ async function resetUserUpgrades(userId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
-        if (!response.ok) throw new Error('Failed to reset upgrades');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to reset upgrades');
+        }
 
         closeModal('edit-user-modal');
         loadUsers(currentPage.users);
         showNotification('All user upgrades reset', 'success');
 
     } catch (error) {
-        showNotification(`Error resetting upgrades: ${error.message}`, 'error');
+        console.error('Error resetting upgrades:', error);
+        showNotification(`Failed to reset upgrades: ${error.message}`, 'error');
     }
 }
 
+// Delete user
 async function deleteUser(userId) {
     if (!confirm('⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!')) return;
 
@@ -492,28 +653,38 @@ async function deleteUser(userId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
-        if (!response.ok) throw new Error('Failed to delete user');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to delete user');
+        }
 
         closeModal('edit-user-modal');
         loadUsers(currentPage.users);
         showNotification('User deleted successfully', 'success');
 
     } catch (error) {
-        showNotification(`Error deleting user: ${error.message}`, 'error');
+        console.error('Error deleting user:', error);
+        showNotification(`Failed to delete user: ${error.message}`, 'error');
     }
 }
 
-async function saveUserChanges(userId) {
-    console.log("1. Save button clicked for user:", userId);
+// Save user changes
+async function saveUserChanges() {
+    if (!currentEditingUserId) {
+        showNotification('No user selected', 'error');
+        return;
+    }
 
     const saveBtn = document.querySelector('#edit-user-form .btn-primary');
-    const originalText = saveBtn.innerText;
+    if (!saveBtn) return;
+
+    const originalText = saveBtn.innerHTML;
     saveBtn.disabled = true;
-    saveBtn.innerText = "Saving...";
+    saveBtn.innerHTML = '<span>⏳</span> Saving...';
 
     try {
         const getValue = (id) => {
@@ -539,48 +710,46 @@ async function saveUserChanges(userId) {
             auto_tier_5_level: parseInt(getValue('lvl-auto-5')) || 0,
         };
 
-        console.log("2. Sending payload:", updates);
+        // Validate required fields
+        if (!updates.score || !updates.click_value || !updates.auto_click_rate) {
+            throw new Error('Please fill in all required fields');
+        }
 
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}`, {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             },
             body: JSON.stringify(updates)
         });
 
-        console.log("3. Response status:", response.status);
-
         if (!response.ok) {
-            const errData = await response.json();
-            throw new Error(errData.error || `Server responded with ${response.status}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Server responded with ${response.status}`);
         }
 
         const result = await response.json();
-        console.log("4. Success:", result);
 
         showNotification('✅ Saved successfully!', 'success');
         closeModal('edit-user-modal');
 
-  
-        await loadUsers(currentPage.users);      
-        await loadDashboardStats();             
-        if (currentSection === 'admin-logs') { 
-            await loadAdminLogs(currentPage.adminLogs);
-        }
+        // Refresh data
+        await loadUsers(currentPage.users);
+        await loadDashboardStats();
 
     } catch (error) {
-        console.error("SAVE FAILED:", error);
+        console.error('Save failed:', error);
         showNotification('❌ Error saving: ' + error.message, 'error');
     } finally {
         if (saveBtn) {
             saveBtn.disabled = false;
-            saveBtn.innerText = originalText;
+            saveBtn.innerHTML = originalText;
         }
     }
 }
 
+// Ban user
 async function banUser(userId) {
     if (!confirm('Ban this user?')) return;
 
@@ -589,12 +758,12 @@ async function banUser(userId) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || 'Failed to ban user');
         }
 
@@ -603,22 +772,24 @@ async function banUser(userId) {
         await logAdminAction('ban_user', userId, 'User banned');
 
     } catch (error) {
+        console.error('Error banning user:', error);
         showNotification(`❌ Error banning user: ${error.message}`, 'error');
     }
 }
 
+// Unban user
 async function unbanUser(userId) {
     try {
         const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/unban`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
         if (!response.ok) {
-            const errorData = await response.json();
+            const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || 'Failed to unban user');
         }
 
@@ -628,68 +799,18 @@ async function unbanUser(userId) {
         await logAdminAction('unban_user', userId, 'User unbanned');
 
     } catch (error) {
+        console.error('Error unbanning user:', error);
         showNotification(`❌ Error unbanning user: ${error.message}`, 'error');
     }
 }
 
-async function makeAdmin(userId) {
-    if (!confirm(`Make user ${userId} an admin?`)) return;
-
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/make-admin`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to make user admin');
-        }
-
-        await loadUsers(currentPage.users);
-        closeModal('edit-user-modal');
-        showNotification('✅ User promoted to admin successfully', 'success');
-        await logAdminAction('make_admin', userId, 'User promoted to admin');
-
-    } catch (error) {
-        showNotification(`❌ Error making user admin: ${error.message}`, 'error');
-    }
-}
-
-async function removeAdmin(userId) {
-    if (!confirm('Remove admin privileges from this user?')) return;
-
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/remove-admin`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
-            }
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to remove admin privileges');
-        }
-
-        await loadUsers(currentPage.users);
-        closeModal('edit-user-modal');
-        showNotification('✅ Admin privileges removed successfully', 'success');
-        await logAdminAction('remove_admin', userId, 'Admin privileges removed');
-
-    } catch (error) {
-        showNotification(`❌ Error removing admin: ${error.message}`, 'error');
-    }
-}
-
+// Load user logs
 async function loadUserLogs(page = 1) {
     if (!currentUser) return;
 
     const tbody = document.getElementById('user-logs-tbody');
+    if (!tbody) return;
+
     tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading user logs...</td></tr>';
 
     try {
@@ -697,24 +818,39 @@ async function loadUserLogs(page = 1) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch user logs');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to fetch user logs');
+        }
 
         const data = await response.json();
         userLogs = data.logs || [];
+        
+        // Update current page
+        currentPage.userLogs = page;
+        
+        // Render logs table
         renderUserLogsTable();
-        renderPagination('user-logs', data.totalCount, page);
+        
+        // Render pagination
+        renderPagination('user-logs', data.totalCount || 0, page);
 
     } catch (error) {
+        console.error('Error loading user logs:', error);
         tbody.innerHTML = `<tr><td colspan="5" class="error">Error loading user logs: ${error.message}</td></tr>`;
+        showNotification('Failed to load user logs', 'error');
     }
 }
 
+// Render user logs table
 function renderUserLogsTable() {
     const tbody = document.getElementById('user-logs-tbody');
+    
+    if (!tbody) return;
 
     if (userLogs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="loading">No user logs found</td></tr>';
@@ -732,10 +868,13 @@ function renderUserLogsTable() {
     `).join('');
 }
 
+// Load admin logs
 async function loadAdminLogs(page = 1) {
     if (!currentUser) return;
 
     const tbody = document.getElementById('admin-logs-tbody');
+    if (!tbody) return;
+
     tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading admin logs...</td></tr>';
 
     try {
@@ -743,24 +882,39 @@ async function loadAdminLogs(page = 1) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch admin logs');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to fetch admin logs');
+        }
 
         const data = await response.json();
         adminLogs = data.logs || [];
+        
+        // Update current page
+        currentPage.adminLogs = page;
+        
+        // Render logs table
         renderAdminLogsTable();
-        renderPagination('admin-logs', data.totalCount, page);
+        
+        // Render pagination
+        renderPagination('admin-logs', data.totalCount || 0, page);
 
     } catch (error) {
+        console.error('Error loading admin logs:', error);
         tbody.innerHTML = `<tr><td colspan="6" class="error">Error loading admin logs: ${error.message}</td></tr>`;
+        showNotification('Failed to load admin logs', 'error');
     }
 }
 
+// Render admin logs table
 function renderAdminLogsTable() {
     const tbody = document.getElementById('admin-logs-tbody');
+    
+    if (!tbody) return;
 
     if (adminLogs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" class="loading">No admin logs found</td></tr>';
@@ -770,7 +924,7 @@ function renderAdminLogsTable() {
     tbody.innerHTML = adminLogs.map(log => `
         <tr>
             <td>${log.admin_id}</td>
-            <td>${log.admin_id === '71bf9556-b67f-4860-8219-270f32ccb89b' ? 'You' : log.admin_id}</td>
+            <td>${log.admin_id === currentUser?.id ? 'You' : log.admin_id}</td>
             <td>${log.action_type}</td>
             <td>${log.target_user_id || 'N/A'}</td>
             <td>${log.details}</td>
@@ -779,10 +933,13 @@ function renderAdminLogsTable() {
     `).join('');
 }
 
+// Load transactions
 async function loadTransactions(page = 1) {
     if (!currentUser) return;
 
     const tbody = document.getElementById('transactions-tbody');
+    if (!tbody) return;
+
     tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading transactions...</td></tr>';
 
     try {
@@ -790,24 +947,39 @@ async function loadTransactions(page = 1) {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                'Admin-ID': currentUser.id
+                'x-admin-secret': ADMIN_SECRET
             }
         });
 
-        if (!response.ok) throw new Error('Failed to fetch transactions');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to fetch transactions');
+        }
 
         const data = await response.json();
         transactions = data.transactions || [];
+        
+        // Update current page
+        currentPage.transactions = page;
+        
+        // Render transactions table
         renderTransactionsTable();
-        renderPagination('transactions', data.totalCount, page);
+        
+        // Render pagination
+        renderPagination('transactions', data.totalCount || 0, page);
 
     } catch (error) {
+        console.error('Error loading transactions:', error);
         tbody.innerHTML = `<tr><td colspan="5" class="error">Error loading transactions: ${error.message}</td></tr>`;
+        showNotification('Failed to load transactions', 'error');
     }
 }
 
+// Render transactions table
 function renderTransactionsTable() {
     const tbody = document.getElementById('transactions-tbody');
+    
+    if (!tbody) return;
 
     if (transactions.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="loading">No transactions found</td></tr>';
@@ -825,80 +997,146 @@ function renderTransactionsTable() {
     `).join('');
 }
 
+// Load recent activity
+async function loadRecentActivity() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/combined-activity`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to load recent activity');
+        }
+
+        const data = await response.json();
+        renderRecentActivity(data.logs || []);
+
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+    }
+}
+
+// Render recent activity
+function renderRecentActivity(logs) {
+    const tbody = document.getElementById('recent-activity-tbody');
+    
+    if (!tbody) return;
+
+    if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = logs.map(log => {
+        const badgeStyle = log.source === 'ADMIN'
+            ? 'status-admin'
+            : 'status-active';
+
+        return `
+            <tr>
+                <td>${new Date(log.time).toLocaleString()}</td>
+                <td><span class="status-badge ${badgeStyle}">${log.source}</span></td>
+                <td>${log.actor}</td>
+                <td>${log.action}</td>
+                <td>${log.details}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// Format date
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
 }
 
+// Close modal
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.classList.remove('active');
     }
+    currentEditingUserId = null;
 }
 
+// Show notification
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 1rem 2rem;
-        border-radius: var(--border-radius);
-        color: white;
-        font-weight: 600;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️'}</span>
+        <span>${message}</span>
     `;
-
-    if (type === 'success') {
-        notification.style.background = 'var(--success)';
-    } else if (type === 'error') {
-        notification.style.background = 'var(--danger)';
-    } else {
-        notification.style.background = 'var(--primary-accent)';
-    }
-
-    notification.textContent = message;
+    
     document.body.appendChild(notification);
-
+    
+    // Auto remove after 3 seconds
     setTimeout(() => {
         if (notification.parentNode) {
-            document.body.removeChild(notification);
+            notification.style.animation = 'slideInRight 0.3s ease reverse';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
         }
     }, 3000);
 }
 
+// Render pagination
 function renderPagination(type, totalCount, currentPageNum) {
     const totalPages = Math.ceil(totalCount / itemsPerPage);
     const paginationElement = document.getElementById(`${type}-pagination`);
-
+    
+    if (!paginationElement) return;
+    
     if (totalPages <= 1) {
         paginationElement.innerHTML = '';
         return;
     }
-
+    
     let paginationHTML = '';
-
+    
+    // Previous button
     if (currentPageNum > 1) {
-        paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">Previous</button>`;
+        paginationHTML += `
+            <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
+                ←
+            </button>
+        `;
     }
-
+    
+    // Page numbers
     for (let i = 1; i <= totalPages; i++) {
         if (i === currentPageNum) {
             paginationHTML += `<button class="page-btn active">${i}</button>`;
         } else {
-            paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">${i}</button>`;
+            paginationHTML += `
+                <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">
+                    ${i}
+                </button>
+            `;
         }
     }
-
+    
+    // Next button
     if (currentPageNum < totalPages) {
-        paginationHTML += `<button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">Next</button>`;
+        paginationHTML += `
+            <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
+                →
+            </button>
+        `;
     }
-
+    
     paginationElement.innerHTML = paginationHTML;
 }
 
+// Sort functions
 function sortUsers(field) {
     if (sortConfig.users.field === field) {
         sortConfig.users.direction = sortConfig.users.direction === 'asc' ? 'desc' : 'asc';
@@ -943,24 +1181,21 @@ function sortTransactions(field) {
     loadTransactions(currentPage.transactions);
 }
 
+// Search with debounce
+function debounceSearch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        searchUsers();
+    }, 300);
+}
+
+// Search users
 function searchUsers() {
     currentPage.users = 1;
     loadUsers(1);
 }
 
-function searchUserLogs() {
-
-    console.log('Search feature requires backend update for Logs');
-}
-
-function searchAdminLogs() {
-    console.log('Search feature requires backend update for Logs');
-}
-
-function searchTransactions() {
-    console.log('Search feature requires backend update for Transactions');
-}
-
+// Log admin action
 async function logAdminAction(actionType, targetUserId, details) {
     if (!supabaseClient || !currentUser) return;
 
@@ -978,6 +1213,7 @@ async function logAdminAction(actionType, targetUserId, details) {
     }
 }
 
+// Refresh all data
 async function refreshAllData() {
     if (!currentUser) return;
 
@@ -993,49 +1229,12 @@ async function refreshAllData() {
 
         showNotification('✅ All data refreshed successfully', 'success');
     } catch (error) {
+        console.error('Error refreshing data:', error);
         showNotification(`❌ Error refreshing data: ${error.message}`, 'error');
     }
 }
 
-async function loadRecentActivity() {
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/combined-activity`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json', 'Admin-ID': currentUser.id }
-        });
-
-        const data = await response.json();
-        renderRecentActivity(data.logs || []);
-    } catch (error) {
-        console.error(error);
-    }
-}
-
-function renderRecentActivity(logs) {
-    const tbody = document.getElementById('recent-activity-tbody');
-    if (!logs.length) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = logs.map(log => {
-        const badgeStyle = log.source === 'ADMIN'
-            ? 'background: rgba(46, 204, 113, 0.2); color: #2ecc71; padding: 2px 6px; border-radius: 4px; font-weight:bold; font-size:0.75rem;'
-            : 'background: rgba(142, 68, 173, 0.2); color: #9b59b6; padding: 2px 6px; border-radius: 4px; font-weight:bold; font-size:0.75rem;';
-
-        return `
-            <tr>
-                <td>${new Date(log.time).toLocaleString()}</td>
-                <td><span style="${badgeStyle}">${log.source}</span></td>
-                <td>${log.actor}</td>
-                <td>${log.action}</td>
-                <td style="color:#ccc; font-size:0.85rem">${log.details}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-
+// Export user data
 function exportUserData() {
     if (!currentUser) return;
 
@@ -1057,7 +1256,7 @@ function exportUserData() {
         csvContent += row + '\n';
     });
 
-
+    // Create and download CSV
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1071,57 +1270,18 @@ function exportUserData() {
     showNotification('✅ User data exported successfully', 'success');
 }
 
-function showBackupModal() {
-    document.getElementById('backup-modal').classList.add('active');
+// Export transaction data
+function exportTransactionData() {
+    showNotification('Exporting transaction data...', 'info');
+    // Implement export logic here
 }
 
-function showMaintenanceModal() {
-    document.getElementById('maintenance-modal').classList.add('active');
-}
-
+// Show broadcast modal
 function showBroadcastModal() {
     document.getElementById('broadcast-modal').classList.add('active');
 }
 
-function showMassActionModal() {
-    document.getElementById('mass-actions-modal').classList.add('active');
-}
-
-async function createBackup() {
-    showNotification('💾 Creating backup...', 'info');
-
-    try {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        await logAdminAction('create_backup', null, 'System backup created');
-
-        closeModal('backup-modal');
-        showNotification('✅ Backup created successfully', 'success');
-    } catch (error) {
-        showNotification(`❌ Backup failed: ${error.message}`, 'error');
-    }
-}
-
-function enableMaintenance() {
-    showNotification('🔧 Enabling maintenance mode...', 'warning');
-
-    setTimeout(() => {
-        closeModal('maintenance-modal');
-        showNotification('✅ Maintenance mode enabled', 'success');
-        logAdminAction('enable_maintenance', null, 'Maintenance mode enabled');
-    }, 1000);
-}
-
-function disableMaintenance() {
-    showNotification('🔧 Disabling maintenance mode...', 'info');
-
-    setTimeout(() => {
-        closeModal('maintenance-modal');
-        showNotification('✅ Maintenance mode disabled', 'success');
-        logAdminAction('disable_maintenance', null, 'Maintenance mode disabled');
-    }, 1000);
-}
-
+// Send broadcast
 async function sendBroadcast() {
     const message = document.getElementById('broadcast-message').value;
     const type = document.getElementById('broadcast-type').value;
@@ -1134,6 +1294,7 @@ async function sendBroadcast() {
     showNotification('📢 Sending broadcast...', 'info');
 
     try {
+        // Implement broadcast logic here
         await new Promise(resolve => setTimeout(resolve, 1500));
         await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
 
@@ -1141,17 +1302,26 @@ async function sendBroadcast() {
         document.getElementById('broadcast-message').value = '';
         showNotification('✅ Broadcast sent successfully', 'success');
     } catch (error) {
+        console.error('Error sending broadcast:', error);
         showNotification(`❌ Broadcast failed: ${error.message}`, 'error');
     }
 }
 
-function massAddCoins() {
-    const amount = prompt('Enter amount to add to all users:');
-    if (!amount) return;
-    showNotification(`💰 Adding ${amount} coins to all users...`, 'info');
-    closeModal('mass-actions-modal');
+// Show mass action modal
+function showMassActionModal() {
+    document.getElementById('mass-actions-modal').classList.add('active');
 }
 
+// Mass add coins
+function massAddCoins() {
+    const amount = prompt('Enter amount to add to all users:');
+    if (amount) {
+        showNotification(`💰 Adding ${amount} coins to all users...`, 'info');
+        closeModal('mass-actions-modal');
+    }
+}
+
+// Mass reset upgrades
 function massResetUpgrades() {
     if (confirm('⚠️ Reset ALL upgrades for ALL users? This cannot be undone!')) {
         showNotification('🔄 Resetting all user upgrades...', 'warning');
@@ -1159,41 +1329,120 @@ function massResetUpgrades() {
     }
 }
 
+// Mass ban inactive users
 function massBanInactive() {
     const days = prompt('Ban users inactive for how many days?', '30');
-    if (!days) return;
-    showNotification(`🔨 Banning users inactive for ${days} days...`, 'warning');
-    closeModal('mass-actions-modal');
+    if (days) {
+        showNotification(`🔨 Banning users inactive for ${days} days...`, 'warning');
+        closeModal('mass-actions-modal');
+    }
 }
 
+// Mass export data
 function massExportData() {
     showNotification('📥 Preparing full data export...', 'info');
     closeModal('mass-actions-modal');
     exportUserData();
 }
 
+// Create backup
+async function createBackup() {
+    showNotification('💾 Creating backup...', 'info');
+
+    try {
+        // Simulate backup process
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await logAdminAction('create_backup', null, 'System backup created');
+
+        closeModal('mass-actions-modal');
+        showNotification('✅ Backup created successfully', 'success');
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        showNotification(`❌ Backup failed: ${error.message}`, 'error');
+    }
+}
+
+// Enable maintenance
+function enableMaintenance() {
+    showNotification('🔧 Enabling maintenance mode...', 'warning');
+
+    setTimeout(() => {
+        closeModal('mass-actions-modal');
+        showNotification('✅ Maintenance mode enabled', 'success');
+        logAdminAction('enable_maintenance', null, 'Maintenance mode enabled');
+    }, 1000);
+}
+
+// Disable maintenance
+function disableMaintenance() {
+    showNotification('🔧 Disabling maintenance mode...', 'info');
+
+    setTimeout(() => {
+        closeModal('mass-actions-modal');
+        showNotification('✅ Maintenance mode disabled', 'success');
+        logAdminAction('disable_maintenance', null, 'Maintenance mode disabled');
+    }, 1000);
+}
+
+// Setup event listeners
 function setupEventListeners() {
-    document.getElementById('password').addEventListener('keypress', (e) => {
+    // Enter key for login
+    document.getElementById('password')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             login();
         }
     });
 
+    // Close modals when clicking outside
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('active');
+            currentEditingUserId = null;
         }
     });
 
+    // Escape key to close modals
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal.active').forEach(modal => {
                 modal.classList.remove('active');
             });
+            currentEditingUserId = null;
+        }
+        
+        // Ctrl+R to refresh
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            refreshAllData();
+        }
+    });
+
+    // Auto-focus search on users page
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('nav-btn') && 
+            e.target.querySelector('.nav-text')?.textContent === 'Users') {
+            setTimeout(() => {
+                const searchInput = document.getElementById('user-search');
+                if (searchInput) {
+                    searchInput.focus();
+                }
+            }, 100);
         }
     });
 }
 
+// Initialize when page loads
 document.addEventListener('DOMContentLoaded', function () {
     setTimeout(initAdminPanel, 100);
+});
+
+// Add global error handler
+window.addEventListener('error', function(event) {
+    console.error('Global error:', event.error);
+    showNotification('An unexpected error occurred', 'error');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled promise rejection:', event.reason);
+    showNotification('An unexpected error occurred', 'error');
 });

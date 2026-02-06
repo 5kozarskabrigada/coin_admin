@@ -10,708 +10,479 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<style>
-    :root {
-        --bg-body: #0f0d17;
-        --bg-surface: #1a1625;
-        --bg-hover: #2a2438;
-        --text-primary: #ffffff;
-        --text-secondary: #a0a0a0;
-        --primary: #8e44ad;
-        --primary-hover: #9b59b6;
-        --danger: #e74c3c;
-        --danger-hover: #c0392b;
-        --success: #2ecc71;
-        --border: #2f2b3b;
-        --radius: 8px;
-        --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-    }
-
-    * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-    }
-
-    body {
-        font-family: 'Inter', sans-serif;
-        background-color: var(--bg-body);
-        color: var(--text-primary);
-        line-height: 1.6;
-        font-size: 14px;
-    }
-
-    .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding-bottom: 20px;
-        margin-bottom: 20px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .header h1 {
-        font-size: 1.5rem;
-        color: var(--primary);
-    }
-
-    .admin-nav {
-        display: flex;
-        gap: 10px;
-        margin-bottom: 25px;
-        flex-wrap: wrap;
-    }
-
-    .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px 16px;
-        background: var(--bg-surface);
-        border: 1px solid var(--border);
-        color: var(--text-secondary);
-        border-radius: var(--radius);
-        cursor: pointer;
-        font-weight: 600;
-        transition: all 0.2s ease;
-        font-size: 0.9rem;
-    }
-
-    .btn:hover {
-        background: var(--bg-hover);
-        color: var(--text-primary);
-        border-color: var(--text-secondary);
-    }
-
-    .btn.active {
-        background: var(--primary);
-        color: white;
-        border-color: var(--primary);
-    }
-
-    .btn-primary {
-        background: var(--primary);
-        color: white;
-        border: none;
-    }
-
-    .btn-primary:hover {
-        background: var(--primary-hover);
-        border: none;
-        color: white;
-        transform: translateY(-1px);
-    }
-
-    .btn-danger {
-        background: rgba(231, 76, 60, 0.1);
-        color: var(--danger);
-        border: 1px solid var(--danger);
-    }
-
-    .btn-danger:hover {
-        background: var(--danger);
-        color: white;
-    }
-
-    .btn-success {
-        background: rgba(46, 204, 113, 0.1);
-        color: var(--success);
-        border: 1px solid var(--success);
-    }
-
-    .btn-success:hover {
-        background: var(--success);
-        color: white;
-    }
-
-       .admin-nav {
-        display: flex;
-        gap: 12px;
-        margin-bottom: 30px;
-        padding: 15px;
-        background: var(--bg-surface);
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        flex-wrap: wrap;
-    }
-
-    .nav-btn {
-        padding: 10px 20px;
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--text-secondary);
-        border-radius: var(--radius);
-        cursor: pointer;
-        font-weight: 600;
-        font-size: 0.95rem;
-        transition: all 0.2s ease;
-    }
-
-    .nav-btn:hover {
-        background: var(--bg-hover);
-        color: var(--text-primary);
-    }
-
-    .nav-btn.active {
-        background: var(--primary);
-        color: white;
-        box-shadow: 0 4px 12px rgba(142, 68, 173, 0.4);
-    }
-
-    .upgrade-section {
-        background: rgba(0,0,0,0.2);
-        padding: 15px;
-        border-radius: var(--radius);
-        margin-bottom: 15px;
-        border: 1px solid var(--border);
-    }
-    .upgrade-title {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        margin-bottom: 10px;
-        font-weight: bold;
-    }
-    .upgrade-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-        gap: 10px;
-    }
-    .upgrade-input label {
-        font-size: 0.75rem;
-        margin-bottom: 2px;
-    }
-    .upgrade-input input {
-        padding: 6px;
-        font-size: 0.9rem;
-    }
-
-    .btn-sm {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-    }
-
-    .form-group {
-        margin-bottom: 15px;
-    }
-
-    label {
-        display: block;
-        margin-bottom: 5px;
-        color: var(--text-secondary);
-        font-size: 0.85rem;
-    }
-
-    input,
-    select,
-    textarea {
-        width: 100%;
-        padding: 10px;
-        background: var(--bg-body);
-        border: 1px solid var(--border);
-        color: var(--text-primary);
-        border-radius: var(--radius);
-        font-size: 1rem;
-    }
-
-    input:focus,
-    select:focus {
-        outline: none;
-        border-color: var(--primary);
-    }
-
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
-    }
-
-    .stat-card {
-        background: var(--bg-surface);
-        padding: 20px;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        text-align: center;
-    }
-
-    .stat-value {
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--text-primary);
-        margin-bottom: 5px;
-    }
-
-    .stat-label {
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .table-container {
-        background: var(--bg-surface);
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        overflow-x: auto;
-        box-shadow: var(--shadow);
-    }
-
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        min-width: 800px;
-    }
-
-    th,
-    td {
-        padding: 12px 16px;
-        text-align: left;
-        border-bottom: 1px solid var(--border);
-    }
-
-    th {
-        background: rgba(0, 0, 0, 0.2);
-        color: var(--text-secondary);
-        font-weight: 600;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        cursor: pointer;
-    }
-
-    th:hover {
-        color: var(--primary);
-    }
-
-    td {
-        color: var(--text-primary);
-        font-size: 0.9rem;
-    }
-
-    tr:hover td {
-        background: var(--bg-hover);
-    }
-
-    .status-badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-
-    .status-active {
-        background: rgba(46, 204, 113, 0.2);
-        color: var(--success);
-    }
-
-    .status-banned {
-        background: rgba(231, 76, 60, 0.2);
-        color: var(--danger);
-    }
-
-    .status-admin {
-        background: rgba(142, 68, 173, 0.2);
-        color: var(--primary);
-    }
-
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(3px);
-    }
-
-    .modal.active {
-        display: flex;
-    }
-
-    .modal-content {
-        background: var(--bg-surface);
-        width: 90%;
-        max-width: 500px;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        padding: 25px;
-        max-height: 90vh;
-        overflow-y: auto;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid var(--border);
-    }
-
-    .modal-header h3 {
-        color: var(--text-primary);
-    }
-
-    .close-modal {
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        font-size: 1.5rem;
-        cursor: pointer;
-    }
-
-    .close-modal:hover {
-        color: var(--danger);
-    }
-
-    .section-divider {
-        margin: 20px 0 10px 0;
-        padding-bottom: 5px;
-        border-bottom: 1px solid var(--border);
-        color: var(--primary);
-        font-weight: 600;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-    }
-
-    .grid-2 {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-
-    .action-row {
-        margin-top: 20px;
-        display: flex;
-        justify-content: flex-end;
-        gap: 10px;
-    }
-
-    #login-section {
-        height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .login-form {
-        background: var(--bg-surface);
-        padding: 40px;
-        border-radius: var(--radius);
-        border: 1px solid var(--border);
-        width: 100%;
-        max-width: 400px;
-    }
-
-    .section {
-        display: none;
-    }
-
-    .section.active {
-        display: block;
-        animation: fadeEffect 0.3s;
-    }
-
-    @keyframes fadeEffect {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-</style>
+    <link rel="stylesheet" href="admin.css">
+</head>
 
 <body>
     <section id="login-section">
-        <div class="login-form">
-            <h1>Admin Login</h1>
-            <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="admin@example.com">
+        <div class="login-card">
+            <div class="login-header">
+                <h1><span class="highlight">Sisi Clicker</span> Admin</h1>
+                <p class="login-subtitle">Secure Admin Dashboard</p>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" placeholder="••••••••">
+            <div class="login-body">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <div class="input-with-icon">
+                        <svg class="input-icon" viewBox="0 0 24 24">
+                            <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z"/>
+                        </svg>
+                        <input type="email" id="email" placeholder="admin@example.com" autocomplete="username">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-with-icon">
+                        <svg class="input-icon" viewBox="0 0 24 24">
+                            <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                        </svg>
+                        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+                    </div>
+                </div>
+                <div id="login-error" class="error-message"></div>
+                <button class="btn btn-primary btn-login" onclick="login()">
+                    <span class="btn-icon">🔐</span>
+                    Sign In
+                </button>
             </div>
-            <button class="btn btn-primary" onclick="login()">Login</button>
-            <div id="login-error" class="error" style="display: none;"></div>
         </div>
     </section>
-
 
     <section id="admin-panel">
-        <div class="container">
-            <div class="admin-header">
-                <h1>Sisi Clicker Admin Panel</h1>
-                <button class="btn btn-danger" onclick="logout()">Logout</button>
+        <!-- Header -->
+        <header class="admin-header">
+            <div class="header-left">
+                <div class="logo">
+                    <span class="logo-icon">👑</span>
+                    <div>
+                        <h2 class="logo-title">Sisi Clicker <span class="highlight">Admin</span></h2>
+                        <p class="logo-subtitle">Dashboard v1.0</p>
+                    </div>
+                </div>
             </div>
+            
+            <div class="header-center">
+                <div class="admin-nav">
+                    <button class="nav-btn active" onclick="showSection('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-text">Dashboard</span>
+                    </button>
+                    <button class="nav-btn" onclick="showSection('users')">
+                        <span class="nav-icon">👥</span>
+                        <span class="nav-text">Users</span>
+                    </button>
+                    <button class="nav-btn" onclick="showSection('transactions')">
+                        <span class="nav-icon">💸</span>
+                        <span class="nav-text">Transactions</span>
+                    </button>
+                    <button class="nav-btn" onclick="showSection('user-logs')">
+                        <span class="nav-icon">📝</span>
+                        <span class="nav-text">User Logs</span>
+                    </button>
+                    <button class="nav-btn" onclick="showSection('admin-logs')">
+                        <span class="nav-icon">🔧</span>
+                        <span class="nav-text">Admin Logs</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="header-right">
+                <div class="user-info">
+                    <span class="user-avatar">👤</span>
+                    <div class="user-details">
+                        <span class="user-name" id="admin-name">Admin</span>
+                        <span class="user-role">Administrator</span>
+                    </div>
+                </div>
+                <button class="btn btn-danger btn-logout" onclick="logout()">
+                    <span class="btn-icon">🚪</span>
+                    Logout
+                </button>
+            </div>
+        </header>
 
-            <div class="admin-nav">
-                <button class="nav-btn active" onclick="showSection('dashboard')">Dashboard</button>
-                <button class="nav-btn" onclick="showSection('users')">Users Management</button>
-                <button class="nav-btn" onclick="showSection('user-logs')">User Logs</button>
-                <button class="nav-btn" onclick="showSection('admin-logs')">Admin Logs</button>
-                <button class="nav-btn" onclick="showSection('transactions')">Transactions</button>
-            </div>
+        <!-- Main Content -->
+        <main class="admin-main">
+            <!-- Sidebar -->
+            <aside class="admin-sidebar">
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Quick Actions</h3>
+                    <div class="quick-actions">
+                        <button class="sidebar-btn" onclick="refreshAllData()">
+                            <span class="sidebar-icon">🔄</span>
+                            Refresh Data
+                        </button>
+                        <button class="sidebar-btn" onclick="exportUserData()">
+                            <span class="sidebar-icon">📥</span>
+                            Export Users
+                        </button>
+                        <button class="sidebar-btn" onclick="showBroadcastModal()">
+                            <span class="sidebar-icon">📢</span>
+                            Broadcast
+                        </button>
+                        <button class="sidebar-btn" onclick="showMassActionModal()">
+                            <span class="sidebar-icon">⚡</span>
+                            Mass Actions
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">System Status</h3>
+                    <div class="status-list">
+                        <div class="status-item">
+                            <span class="status-indicator online"></span>
+                            <span>Backend: <strong id="backend-status">Online</strong></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator online"></span>
+                            <span>Database: <strong id="db-status">Online</strong></span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-indicator" id="api-status-indicator"></span>
+                            <span>API: <strong id="api-status">Checking...</strong></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Server Info</h3>
+                    <div class="server-info">
+                        <div class="info-row">
+                            <span class="info-label">Uptime:</span>
+                            <span class="info-value" id="server-uptime">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Memory:</span>
+                            <span class="info-value" id="server-memory">--</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Last Backup:</span>
+                            <span class="info-value" id="last-backup">--</span>
+                        </div>
+                    </div>
+                </div>
+            </aside>
 
-        <div id="dashboard" class="section active">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-value" id="total-users">0</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="total-clicks">0</div>
-                    <div class="stat-label">Total Clicks</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="active-today">0</div>
-                    <div class="stat-label">Active Today</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="banned-users">0</div>
-                    <div class="stat-label">Banned Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="total-transactions">0</div>
-                    <div class="stat-label">Total Transactions</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="total-coins">0</div>
-                    <div class="stat-label">Total Coins</div>
-                </div>
-            </div>
-        
-            <div class="section-divider">Quick Actions</div>
-            <div class="quick-actions-grid">
-                <button class="btn btn-warning btn-sm" onclick="refreshAllData()">🔄 Refresh All Data</button>
-                <button class="btn btn-primary btn-sm" onclick="exportUserData()">📊 Export User Data</button>
-                <button class="btn btn-success btn-sm" onclick="showBackupModal()">💾 Create Backup</button>
-                <button class="btn btn-danger btn-sm" onclick="showMaintenanceModal()">🔧 Maintenance Mode</button>
-                <button class="btn btn-info btn-sm" onclick="showBroadcastModal()">📢 Broadcast Message</button>
-                <button class="btn btn-warning btn-sm" onclick="showMassActionModal()">⚡ Mass Actions</button>
-            </div>
-        
-            <div class="section-divider">Recent Activity</div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Source</th>
-                            <th>Actor</th> 
-                            <th>Action</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody id="recent-activity-tbody">
-                        <tr>
-                            <td colspan="5" class="loading">Loading recent activity...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <!-- Content Area -->
+            <div class="admin-content">
+                <!-- Dashboard Section -->
+                <div id="dashboard" class="section active">
+                    <div class="content-header">
+                        <h1 class="page-title">Dashboard Overview</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-outline btn-sm" onclick="refreshAllData()">
+                                <span>🔄</span> Refresh
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">👥</div>
+                            <div class="stat-content">
+                                <h3 class="stat-label">Total Users</h3>
+                                <div class="stat-value" id="total-users">0</div>
+                                <div class="stat-change" id="active-today">0 active today</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">💰</div>
+                            <div class="stat-content">
+                                <h3 class="stat-label">Total Coins</h3>
+                                <div class="stat-value" id="total-coins">0</div>
+                                <div class="stat-change">In circulation</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <h3 class="stat-label">Transactions</h3>
+                                <div class="stat-value" id="total-transactions">0</div>
+                                <div class="stat-change">Total transfers</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">🚫</div>
+                            <div class="stat-content">
+                                <h3 class="stat-label">Banned Users</h3>
+                                <div class="stat-value" id="banned-users">0</div>
+                                <div class="stat-change">Restricted accounts</div>
+                            </div>
+                        </div>
+                    </div>
 
-            <div id="users" class="section">
-                <div class="search-box">
-                    <input type="text" id="user-search" placeholder="Search users by username, email, or user ID..."
-                        oninput="searchUsers()">
+                    <!-- Recent Activity -->
+                    <div class="content-card">
+                        <div class="card-header">
+                            <h2 class="card-title">Recent Activity</h2>
+                            <button class="btn btn-sm btn-outline" onclick="loadRecentActivity()">
+                                <span>↻</span> Refresh
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="activity-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Source</th>
+                                        <th>User</th>
+                                        <th>Action</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-activity-tbody">
+                                    <tr><td colspan="5" class="loading">Loading activity...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
-                <div class="table-container">
-                    <table id="users-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortUsers('user_id')">User ID</th>
-                                <th onclick="sortUsers('username')">Username</th>
-                                <th onclick="sortUsers('score')">Score</th>
-                                <th onclick="sortUsers('click_value')">Per Click</th>
-                                <th onclick="sortUsers('auto_click_rate')">Per Second</th>
-                                <th onclick="sortUsers('last_updated')">Last Active</th>
-                                <th onclick="sortUsers('is_banned')">Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-tbody"> </tbody>
-                    </table>
+
+                <!-- Users Section -->
+                <div id="users" class="section">
+                    <div class="content-header">
+                        <h1 class="page-title">User Management</h1>
+                        <div class="search-bar">
+                            <div class="search-input">
+                                <span class="search-icon">🔍</span>
+                                <input type="text" id="user-search" placeholder="Search users by ID, username..." 
+                                       oninput="debounceSearch()">
+                            </div>
+                            <button class="btn btn-primary" onclick="loadUsers(1)">
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortUsers('user_id')">ID</th>
+                                        <th onclick="sortUsers('username')">Username</th>
+                                        <th onclick="sortUsers('score')">Coins</th>
+                                        <th onclick="sortUsers('click_value')">Per Click</th>
+                                        <th onclick="sortUsers('auto_click_rate')">Per Second</th>
+                                        <th onclick="sortUsers('last_updated')">Last Active</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-tbody">
+                                    <tr><td colspan="8" class="loading">Loading users...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination" id="users-pagination"></div>
+                    </div>
                 </div>
-                <div class="pagination" id="users-pagination"></div>
+
+                <!-- Transactions Section -->
+                <div id="transactions" class="section">
+                    <div class="content-header">
+                        <h1 class="page-title">Transaction History</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-info btn-sm" onclick="exportTransactionData()">
+                                <span>📥</span> Export
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTransactions('sender_id')">Sender</th>
+                                        <th onclick="sortTransactions('receiver_id')">Receiver</th>
+                                        <th onclick="sortTransactions('amount')">Amount</th>
+                                        <th onclick="sortTransactions('receiver_username')">Username</th>
+                                        <th onclick="sortTransactions('created_at')">Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-tbody">
+                                    <tr><td colspan="5" class="loading">Loading transactions...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination" id="transactions-pagination"></div>
+                    </div>
+                </div>
+
+                <!-- User Logs Section -->
+                <div id="user-logs" class="section">
+                    <div class="content-header">
+                        <h1 class="page-title">User Activity Logs</h1>
+                    </div>
+                    
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortUserLogs('user_id')">User ID</th>
+                                        <th onclick="sortUserLogs('username')">Username</th>
+                                        <th onclick="sortUserLogs('action_type')">Action</th>
+                                        <th>Details</th>
+                                        <th onclick="sortUserLogs('created_at')">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="user-logs-tbody">
+                                    <tr><td colspan="5" class="loading">Loading logs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination" id="user-logs-pagination"></div>
+                    </div>
+                </div>
+
+                <!-- Admin Logs Section -->
+                <div id="admin-logs" class="section">
+                    <div class="content-header">
+                        <h1 class="page-title">Admin Activity Logs</h1>
+                    </div>
+                    
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortAdminLogs('admin_id')">Admin ID</th>
+                                        <th>Admin</th>
+                                        <th onclick="sortAdminLogs('action_type')">Action</th>
+                                        <th>Target User</th>
+                                        <th>Details</th>
+                                        <th onclick="sortAdminLogs('created_at')">Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-logs-tbody">
+                                    <tr><td colspan="6" class="loading">Loading admin logs...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="pagination" id="admin-logs-pagination"></div>
+                    </div>
+                </div>
             </div>
-
-            <div id="user-logs" class="section">
-                <div class="search-box">
-                    <input type="text" id="user-logs-search" placeholder="Search user logs..."
-                        oninput="searchUserLogs()">
-                </div>
-                <div class="table-container">
-                    <table id="user-logs-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortUserLogs('user_id')">User ID</th>
-                                <th onclick="sortUserLogs('username')">Username</th>
-                                <th onclick="sortUserLogs('action_type')">Action Type</th>
-                                <th onclick="sortUserLogs('details')">Details</th>
-                                <th onclick="sortUserLogs('created_at')">Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody id="user-logs-tbody">
-
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination" id="user-logs-pagination">
-
-                </div>
-            </div>
-
-            <div id="admin-logs" class="section">
-                <div class="search-box">
-                    <input type="text" id="admin-logs-search" placeholder="Search admin logs..."
-                        oninput="searchAdminLogs()">
-                </div>
-                <div class="table-container">
-                    <table id="admin-logs-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortAdminLogs('admin_id')">Admin ID</th>
-                                <th onclick="sortAdminLogs('admin_username')">Admin Username</th>
-                                <th onclick="sortAdminLogs('action_type')">Action Type</th>
-                                <th onclick="sortAdminLogs('target_user_id')">Target User</th>
-                                <th onclick="sortAdminLogs('details')">Details</th>
-                                <th onclick="sortAdminLogs('created_at')">Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-logs-tbody">
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination" id="admin-logs-pagination">
-                </div>
-            </div>
-
-            <div id="transactions" class="section">
-                <div class="search-box">
-                    <input type="text" id="transactions-search" placeholder="Search transactions..."
-                        oninput="searchTransactions()">
-                </div>
-                <div class="table-container">
-                    <table id="transactions-table">
-                        <thead>
-                            <tr>
-                                <th onclick="sortTransactions('sender_id')">Sender ID</th>
-                                <th onclick="sortTransactions('receiver_id')">Receiver ID</th>
-                                <th onclick="sortTransactions('amount')">Amount</th>
-                                <th onclick="sortTransactions('receiver_username')">Receiver Username</th>
-                                <th onclick="sortTransactions('created_at')">Timestamp</th>
-                            </tr>
-                        </thead>
-                        <tbody id="transactions-tbody">
-                        </tbody>
-                    </table>
-                </div>
-                <div class="pagination" id="transactions-pagination">
-                </div>
-            </div>
-        </div>
+        </main>
     </section>
 
-
+    <!-- Modals -->
     <div id="edit-user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Edit User</h3>
-                <button class="close-modal" onclick="closeModal('edit-user-modal')">&times;</button>
+                <h3 class="modal-title">Edit User</h3>
+                <button class="modal-close" onclick="closeModal('edit-user-modal')">×</button>
             </div>
-            <div id="edit-user-form">
-            </div>
+            <div id="edit-user-form"></div>
         </div>
     </div>
 
-
-    <div id="backup-modal" class="modal">
+    <div id="add-coins-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Create Backup</h3>
-                <button class="close-modal" onclick="closeModal('backup-modal')">&times;</button>
+                <h3 class="modal-title">Add Coins</h3>
+                <button class="modal-close" onclick="closeModal('add-coins-modal')">×</button>
             </div>
-            <p>This will create a backup of all user data and logs.</p>
-            <button class="btn btn-success" onclick="createBackup()">Create Backup</button>
-        </div>
-    </div>
-
-    <div id="maintenance-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Maintenance Mode</h3>
-                <button class="close-modal" onclick="closeModal('maintenance-modal')">&times;</button>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Amount to Add</label>
+                    <input type="text" id="add-coins-amount" class="form-control" placeholder="0.000000100" value="0.000000100">
+                </div>
             </div>
-            <p>Enable maintenance mode? This will temporarily disable the game for all users.</p>
-            <div class="quick-actions-grid">
-                <button class="btn btn-warning" onclick="enableMaintenance()">Enable</button>
-                <button class="btn btn-success" onclick="disableMaintenance()">Disable</button>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="addCoinsToUser()">Add Coins</button>
+                <button class="btn btn-outline" onclick="closeModal('add-coins-modal')">Cancel</button>
             </div>
         </div>
     </div>
-
 
     <div id="broadcast-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📢 Broadcast Message</h3>
-                <button class="close-modal" onclick="closeModal('broadcast-modal')">&times;</button>
+                <h3 class="modal-title">📢 Broadcast Message</h3>
+                <button class="modal-close" onclick="closeModal('broadcast-modal')">×</button>
             </div>
-            <div class="form-group">
-                <label>Message</label>
-                <textarea id="broadcast-message" placeholder="Enter message to broadcast to all users..."
-                    rows="4"></textarea>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea id="broadcast-message" class="form-control" rows="4" placeholder="Enter broadcast message..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <select id="broadcast-type" class="form-control">
+                        <option value="info">ℹ️ Information</option>
+                        <option value="warning">⚠️ Warning</option>
+                        <option value="maintenance">🔧 Maintenance</option>
+                        <option value="update">🔄 Update</option>
+                    </select>
+                </div>
             </div>
-            <div class="form-group">
-                <label>Message Type</label>
-                <select id="broadcast-type">
-                    <option value="info">ℹ️ Information</option>
-                    <option value="warning">⚠️ Warning</option>
-                    <option value="maintenance">🔧 Maintenance</option>
-                    <option value="update">🔄 Update</option>
-                </select>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="sendBroadcast()">Send Broadcast</button>
+                <button class="btn btn-outline" onclick="closeModal('broadcast-modal')">Cancel</button>
             </div>
-            <button class="btn btn-primary" onclick="sendBroadcast()">Send Broadcast</button>
         </div>
     </div>
-    
 
     <div id="mass-actions-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>⚡ Mass Actions</h3>
-                <button class="close-modal" onclick="closeModal('mass-actions-modal')">&times;</button>
+                <h3 class="modal-title">⚡ Mass Actions</h3>
+                <button class="modal-close" onclick="closeModal('mass-actions-modal')">×</button>
             </div>
-            <div class="quick-actions-grid">
-                <button class="btn btn-warning" onclick="massAddCoins()">💰 Add Coins to All</button>
-                <button class="btn btn-success" onclick="massResetUpgrades()">🔄 Reset All Upgrades</button>
-                <button class="btn btn-danger" onclick="massBanInactive()">🔨 Ban Inactive Users</button>
-                <button class="btn btn-info" onclick="massExportData()">📥 Export All Data</button>
+            <div class="modal-body">
+                <div class="action-section">
+                    <h4 class="section-title">User Management</h4>
+                    <div class="action-grid">
+                        <button class="action-btn" onclick="massAddCoins()">
+                            <span class="action-icon">💰</span>
+                            <span class="action-text">Add Coins to All</span>
+                        </button>
+                        <button class="action-btn" onclick="massResetUpgrades()">
+                            <span class="action-icon">🔄</span>
+                            <span class="action-text">Reset All Upgrades</span>
+                        </button>
+                        <button class="action-btn" onclick="massBanInactive()">
+                            <span class="action-icon">🔨</span>
+                            <span class="action-text">Ban Inactive Users</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="action-section">
+                    <h4 class="section-title">System Actions</h4>
+                    <div class="action-grid">
+                        <button class="action-btn" onclick="createBackup()">
+                            <span class="action-icon">💾</span>
+                            <span class="action-text">Create Backup</span>
+                        </button>
+                        <button class="action-btn" onclick="enableMaintenance()">
+                            <span class="action-icon">🔧</span>
+                            <span class="action-text">Enable Maintenance</span>
+                        </button>
+                        <button class="action-btn" onclick="disableMaintenance()">
+                            <span class="action-icon">✅</span>
+                            <span class="action-text">Disable Maintenance</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal('mass-actions-modal')">Close</button>
             </div>
         </div>
     </div>
-
-
 
     <script src="admin.js"></script>
 </body>
