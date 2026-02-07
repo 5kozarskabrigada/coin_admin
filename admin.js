@@ -1,8 +1,10 @@
+ 
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
-const ADMIN_SECRET = 'your-admin-secret-here'; // Replace with your actual admin secret
+const ADMIN_SECRET = 'sisi-clicker-admin-secret-2024';  
 
+ 
 let supabaseClient = null;
 let currentUser = null;
 let currentSection = 'dashboard';
@@ -29,22 +31,22 @@ let sortConfig = {
 let currentEditingUserId = null;
 let debounceTimer = null;
 
-// Initialize Admin Panel
+ 
 async function initAdminPanel() {
     try {
         console.log('Initializing admin panel...');
         
-        // Initialize Supabase
+         
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         console.log('Supabase client initialized');
         
-        // Check authentication
+         
         await checkAuth();
         
-        // Setup event listeners
+         
         setupEventListeners();
         
-        // Initialize dashboard if user is logged in
+         
         if (currentUser) {
             loadDashboardStats();
             loadUsers();
@@ -56,7 +58,6 @@ async function initAdminPanel() {
     }
 }
 
-// Show error page
 function showError(message) {
     document.body.innerHTML = `
         <div style="
@@ -88,7 +89,7 @@ function showError(message) {
     `;
 }
 
-// Check authentication
+ 
 async function checkAuth() {
     if (!supabaseClient) {
         console.error('Supabase client not initialized');
@@ -104,7 +105,7 @@ async function checkAuth() {
         }
 
         if (session && session.user) {
-            // Verify admin access
+             
             const { data: adminUser, error: adminError } = await supabaseClient
                 .from('admin_users')
                 .select('*')
@@ -128,7 +129,7 @@ async function checkAuth() {
     }
 }
 
-// Login function
+ 
 async function login() {
     if (!supabaseClient) {
         showNotification('System not ready. Please refresh.', 'error');
@@ -155,7 +156,7 @@ async function login() {
 
         if (error) throw error;
 
-        // Verify admin access
+         
         const { data: adminUser, error: adminError } = await supabaseClient
             .from('admin_users')
             .select('*')
@@ -173,7 +174,7 @@ async function login() {
         showAdminPanel();
         showNotification('Login successful!', 'success');
 
-        // Log admin action
+         
         await logAdminAction('login', null, 'Admin logged in');
 
     } catch (error) {
@@ -184,7 +185,7 @@ async function login() {
     }
 }
 
-// Logout function
+ 
 async function logout() {
     try {
         if (supabaseClient) {
@@ -200,39 +201,39 @@ async function logout() {
     }
 }
 
-// Show admin panel
+ 
 function showAdminPanel() {
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('admin-panel').style.display = 'block';
 }
 
-// Show section
+ 
 function showSection(sectionName) {
-    // Hide all sections
+     
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
     });
 
-    // Remove active class from all nav buttons
+     
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    // Show selected section
+     
     const sectionElement = document.getElementById(sectionName);
     if (sectionElement) {
         sectionElement.classList.add('active');
     }
 
-    // Add active class to clicked button
+     
     if (event && event.target) {
         event.target.classList.add('active');
     }
 
-    // Update current section
+     
     currentSection = sectionName;
 
-    // Load section data
+     
     switch (sectionName) {
         case 'dashboard':
             loadDashboardStats();
@@ -252,7 +253,7 @@ function showSection(sectionName) {
     }
 }
 
-// Load dashboard stats
+ 
 async function loadDashboardStats() {
     if (!currentUser) return;
 
@@ -272,31 +273,31 @@ async function loadDashboardStats() {
 
         const data = await response.json();
 
-        // Update stats
+         
         document.getElementById('total-users').textContent = data.totalUsers || 0;
         document.getElementById('active-today').textContent = data.activeToday || 0;
         document.getElementById('banned-users').textContent = data.bannedUsers || 0;
         document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
         document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
 
-        // Update API status
+         
         document.getElementById('api-status').textContent = 'Online';
         document.getElementById('api-status-indicator').classList.add('online');
 
-        // Load recent activity
+         
         await loadRecentActivity();
 
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
         showNotification('Failed to load dashboard data', 'error');
         
-        // Update API status to offline
+         
         document.getElementById('api-status').textContent = 'Offline';
         document.getElementById('api-status-indicator').classList.remove('online');
     }
 }
 
-// Load users with pagination and search
+ 
 async function loadUsers(page = 1) {
     if (!currentUser) return;
     
@@ -331,13 +332,13 @@ async function loadUsers(page = 1) {
         const data = await response.json();
         users = data.users || [];
         
-        // Update current page
+         
         currentPage.users = page;
         
-        // Render users table
+         
         renderUsersTable();
         
-        // Render pagination
+         
         renderPagination('users', data.totalCount || 0, page);
 
     } catch (error) {
@@ -347,7 +348,7 @@ async function loadUsers(page = 1) {
     }
 }
 
-// Render users table
+ 
 function renderUsersTable() {
     const tbody = document.getElementById('users-tbody');
     
@@ -390,7 +391,7 @@ function renderUsersTable() {
     }).join('');
 }
 
-// Edit user modal
+ 
 async function editUser(userId) {
     const user = users.find(u => u.user_id == userId);
     if (!user) {
@@ -539,17 +540,12 @@ async function editUser(userId) {
     document.getElementById('edit-user-modal').classList.add('active');
 }
 
-// Show add coins modal
+ 
 function showAddCoinsModal() {
     document.getElementById('add-coins-modal').classList.add('active');
 }
 
-// Close add coins modal
-function closeAddCoinsModal() {
-    document.getElementById('add-coins-modal').classList.remove('active');
-}
-
-// Add coins to user
+ 
 async function addCoinsToUser() {
     if (!currentEditingUserId) {
         showNotification('No user selected', 'error');
@@ -588,7 +584,7 @@ async function addCoinsToUser() {
     }
 }
 
-// Reset user score
+ 
 async function resetUserScore(userId) {
     if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
 
@@ -616,7 +612,7 @@ async function resetUserScore(userId) {
     }
 }
 
-// Reset user upgrades
+ 
 async function resetUserUpgrades(userId) {
     if (!confirm('Are you sure you want to reset ALL upgrades for this user? This cannot be undone.')) return;
 
@@ -644,7 +640,7 @@ async function resetUserUpgrades(userId) {
     }
 }
 
-// Delete user
+ 
 async function deleteUser(userId) {
     if (!confirm('⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!')) return;
 
@@ -672,7 +668,7 @@ async function deleteUser(userId) {
     }
 }
 
-// Save user changes
+ 
 async function saveUserChanges() {
     if (!currentEditingUserId) {
         showNotification('No user selected', 'error');
@@ -710,7 +706,7 @@ async function saveUserChanges() {
             auto_tier_5_level: parseInt(getValue('lvl-auto-5')) || 0,
         };
 
-        // Validate required fields
+         
         if (!updates.score || !updates.click_value || !updates.auto_click_rate) {
             throw new Error('Please fill in all required fields');
         }
@@ -734,7 +730,7 @@ async function saveUserChanges() {
         showNotification('✅ Saved successfully!', 'success');
         closeModal('edit-user-modal');
 
-        // Refresh data
+         
         await loadUsers(currentPage.users);
         await loadDashboardStats();
 
@@ -749,7 +745,7 @@ async function saveUserChanges() {
     }
 }
 
-// Ban user
+ 
 async function banUser(userId) {
     if (!confirm('Ban this user?')) return;
 
@@ -777,7 +773,7 @@ async function banUser(userId) {
     }
 }
 
-// Unban user
+ 
 async function unbanUser(userId) {
     try {
         const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/unban`, {
@@ -804,7 +800,7 @@ async function unbanUser(userId) {
     }
 }
 
-// Load user logs
+ 
 async function loadUserLogs(page = 1) {
     if (!currentUser) return;
 
@@ -830,13 +826,13 @@ async function loadUserLogs(page = 1) {
         const data = await response.json();
         userLogs = data.logs || [];
         
-        // Update current page
+         
         currentPage.userLogs = page;
         
-        // Render logs table
+         
         renderUserLogsTable();
         
-        // Render pagination
+         
         renderPagination('user-logs', data.totalCount || 0, page);
 
     } catch (error) {
@@ -846,7 +842,7 @@ async function loadUserLogs(page = 1) {
     }
 }
 
-// Render user logs table
+ 
 function renderUserLogsTable() {
     const tbody = document.getElementById('user-logs-tbody');
     
@@ -868,7 +864,7 @@ function renderUserLogsTable() {
     `).join('');
 }
 
-// Load admin logs
+ 
 async function loadAdminLogs(page = 1) {
     if (!currentUser) return;
 
@@ -894,13 +890,13 @@ async function loadAdminLogs(page = 1) {
         const data = await response.json();
         adminLogs = data.logs || [];
         
-        // Update current page
+         
         currentPage.adminLogs = page;
         
-        // Render logs table
+         
         renderAdminLogsTable();
         
-        // Render pagination
+         
         renderPagination('admin-logs', data.totalCount || 0, page);
 
     } catch (error) {
@@ -910,7 +906,7 @@ async function loadAdminLogs(page = 1) {
     }
 }
 
-// Render admin logs table
+ 
 function renderAdminLogsTable() {
     const tbody = document.getElementById('admin-logs-tbody');
     
@@ -933,7 +929,7 @@ function renderAdminLogsTable() {
     `).join('');
 }
 
-// Load transactions
+ 
 async function loadTransactions(page = 1) {
     if (!currentUser) return;
 
@@ -959,13 +955,13 @@ async function loadTransactions(page = 1) {
         const data = await response.json();
         transactions = data.transactions || [];
         
-        // Update current page
+         
         currentPage.transactions = page;
         
-        // Render transactions table
+         
         renderTransactionsTable();
         
-        // Render pagination
+         
         renderPagination('transactions', data.totalCount || 0, page);
 
     } catch (error) {
@@ -975,7 +971,7 @@ async function loadTransactions(page = 1) {
     }
 }
 
-// Render transactions table
+ 
 function renderTransactionsTable() {
     const tbody = document.getElementById('transactions-tbody');
     
@@ -997,7 +993,7 @@ function renderTransactionsTable() {
     `).join('');
 }
 
-// Load recent activity
+ 
 async function loadRecentActivity() {
     try {
         const response = await fetch(`${BACKEND_URL}/admin/combined-activity`, {
@@ -1021,7 +1017,7 @@ async function loadRecentActivity() {
     }
 }
 
-// Render recent activity
+ 
 function renderRecentActivity(logs) {
     const tbody = document.getElementById('recent-activity-tbody');
     
@@ -1049,13 +1045,13 @@ function renderRecentActivity(logs) {
     }).join('');
 }
 
-// Format date
+ 
 function formatDate(dateString) {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
 }
 
-// Close modal
+ 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -1064,7 +1060,7 @@ function closeModal(modalId) {
     currentEditingUserId = null;
 }
 
-// Show notification
+ 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -1075,7 +1071,7 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-    // Auto remove after 3 seconds
+     
     setTimeout(() => {
         if (notification.parentNode) {
             notification.style.animation = 'slideInRight 0.3s ease reverse';
@@ -1088,7 +1084,7 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Render pagination
+ 
 function renderPagination(type, totalCount, currentPageNum) {
     const totalPages = Math.ceil(totalCount / itemsPerPage);
     const paginationElement = document.getElementById(`${type}-pagination`);
@@ -1102,7 +1098,7 @@ function renderPagination(type, totalCount, currentPageNum) {
     
     let paginationHTML = '';
     
-    // Previous button
+     
     if (currentPageNum > 1) {
         paginationHTML += `
             <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
@@ -1111,7 +1107,7 @@ function renderPagination(type, totalCount, currentPageNum) {
         `;
     }
     
-    // Page numbers
+     
     for (let i = 1; i <= totalPages; i++) {
         if (i === currentPageNum) {
             paginationHTML += `<button class="page-btn active">${i}</button>`;
@@ -1124,7 +1120,7 @@ function renderPagination(type, totalCount, currentPageNum) {
         }
     }
     
-    // Next button
+     
     if (currentPageNum < totalPages) {
         paginationHTML += `
             <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
@@ -1136,7 +1132,7 @@ function renderPagination(type, totalCount, currentPageNum) {
     paginationElement.innerHTML = paginationHTML;
 }
 
-// Sort functions
+ 
 function sortUsers(field) {
     if (sortConfig.users.field === field) {
         sortConfig.users.direction = sortConfig.users.direction === 'asc' ? 'desc' : 'asc';
@@ -1181,7 +1177,7 @@ function sortTransactions(field) {
     loadTransactions(currentPage.transactions);
 }
 
-// Search with debounce
+ 
 function debounceSearch() {
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
@@ -1189,13 +1185,13 @@ function debounceSearch() {
     }, 300);
 }
 
-// Search users
+ 
 function searchUsers() {
     currentPage.users = 1;
     loadUsers(1);
 }
 
-// Log admin action
+ 
 async function logAdminAction(actionType, targetUserId, details) {
     if (!supabaseClient || !currentUser) return;
 
@@ -1213,7 +1209,7 @@ async function logAdminAction(actionType, targetUserId, details) {
     }
 }
 
-// Refresh all data
+ 
 async function refreshAllData() {
     if (!currentUser) return;
 
@@ -1234,7 +1230,7 @@ async function refreshAllData() {
     }
 }
 
-// Export user data
+ 
 function exportUserData() {
     if (!currentUser) return;
 
@@ -1256,7 +1252,7 @@ function exportUserData() {
         csvContent += row + '\n';
     });
 
-    // Create and download CSV
+     
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1270,18 +1266,18 @@ function exportUserData() {
     showNotification('✅ User data exported successfully', 'success');
 }
 
-// Export transaction data
+ 
 function exportTransactionData() {
     showNotification('Exporting transaction data...', 'info');
-    // Implement export logic here
+     
 }
 
-// Show broadcast modal
+ 
 function showBroadcastModal() {
     document.getElementById('broadcast-modal').classList.add('active');
 }
 
-// Send broadcast
+ 
 async function sendBroadcast() {
     const message = document.getElementById('broadcast-message').value;
     const type = document.getElementById('broadcast-type').value;
@@ -1294,7 +1290,7 @@ async function sendBroadcast() {
     showNotification('📢 Sending broadcast...', 'info');
 
     try {
-        // Implement broadcast logic here
+         
         await new Promise(resolve => setTimeout(resolve, 1500));
         await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
 
@@ -1307,12 +1303,12 @@ async function sendBroadcast() {
     }
 }
 
-// Show mass action modal
+ 
 function showMassActionModal() {
     document.getElementById('mass-actions-modal').classList.add('active');
 }
 
-// Mass add coins
+ 
 function massAddCoins() {
     const amount = prompt('Enter amount to add to all users:');
     if (amount) {
@@ -1321,7 +1317,6 @@ function massAddCoins() {
     }
 }
 
-// Mass reset upgrades
 function massResetUpgrades() {
     if (confirm('⚠️ Reset ALL upgrades for ALL users? This cannot be undone!')) {
         showNotification('🔄 Resetting all user upgrades...', 'warning');
@@ -1329,7 +1324,6 @@ function massResetUpgrades() {
     }
 }
 
-// Mass ban inactive users
 function massBanInactive() {
     const days = prompt('Ban users inactive for how many days?', '30');
     if (days) {
@@ -1338,19 +1332,12 @@ function massBanInactive() {
     }
 }
 
-// Mass export data
-function massExportData() {
-    showNotification('📥 Preparing full data export...', 'info');
-    closeModal('mass-actions-modal');
-    exportUserData();
-}
-
-// Create backup
+ 
 async function createBackup() {
     showNotification('💾 Creating backup...', 'info');
 
     try {
-        // Simulate backup process
+         
         await new Promise(resolve => setTimeout(resolve, 2000));
         await logAdminAction('create_backup', null, 'System backup created');
 
@@ -1362,7 +1349,7 @@ async function createBackup() {
     }
 }
 
-// Enable maintenance
+ 
 function enableMaintenance() {
     showNotification('🔧 Enabling maintenance mode...', 'warning');
 
@@ -1373,7 +1360,7 @@ function enableMaintenance() {
     }, 1000);
 }
 
-// Disable maintenance
+ 
 function disableMaintenance() {
     showNotification('🔧 Disabling maintenance mode...', 'info');
 
@@ -1384,16 +1371,16 @@ function disableMaintenance() {
     }, 1000);
 }
 
-// Setup event listeners
+ 
 function setupEventListeners() {
-    // Enter key for login
+     
     document.getElementById('password')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             login();
         }
     });
 
-    // Close modals when clicking outside
+     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('active');
@@ -1401,7 +1388,7 @@ function setupEventListeners() {
         }
     });
 
-    // Escape key to close modals
+     
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal.active').forEach(modal => {
@@ -1410,14 +1397,14 @@ function setupEventListeners() {
             currentEditingUserId = null;
         }
         
-        // Ctrl+R to refresh
+         
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
             refreshAllData();
         }
     });
 
-    // Auto-focus search on users page
+     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('nav-btn') && 
             e.target.querySelector('.nav-text')?.textContent === 'Users') {
@@ -1431,12 +1418,12 @@ function setupEventListeners() {
     });
 }
 
-// Initialize when page loads
+ 
 document.addEventListener('DOMContentLoaded', function () {
-    setTimeout(initAdminPanel, 100);
+    initAdminPanel();
 });
 
-// Add global error handler
+ 
 window.addEventListener('error', function(event) {
     console.error('Global error:', event.error);
     showNotification('An unexpected error occurred', 'error');

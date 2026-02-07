@@ -39,7 +39,7 @@ body {
     overflow-x: hidden;
 }
 
-/* Loading State */
+ 
 .loading {
     padding: 2rem;
     text-align: center;
@@ -58,7 +58,7 @@ body {
     60%, 100% { content: '...'; }
 }
 
-/* Login Section */
+ 
 #login-section {
     display: flex;
     justify-content: center;
@@ -175,7 +175,7 @@ body {
     to { opacity: 1; }
 }
 
-/* Buttons */
+ 
 .btn {
     display: inline-flex;
     align-items: center;
@@ -276,12 +276,12 @@ body {
     font-size: 1.1em;
 }
 
-/* Admin Panel */
+ 
 #admin-panel {
     display: none;
 }
 
-/* Admin Header */
+ 
 .admin-header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -419,14 +419,14 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Admin Main Layout */
+ 
 .admin-main {
     display: grid;
     grid-template-columns: 250px 1fr;
     min-height: calc(100vh - 70px);
 }
 
-/* Sidebar */
+ 
 .admin-sidebar {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -539,14 +539,14 @@ body {
     color: var(--text);
 }
 
-/* Admin Content */
+ 
 .admin-content {
     padding: 24px;
     overflow-y: auto;
     background: var(--darker);
 }
 
-/* Content Header */
+ 
 .content-header {
     display: flex;
     justify-content: space-between;
@@ -604,7 +604,7 @@ body {
     box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-/* Sections */
+ 
 .section {
     display: none;
 }
@@ -614,7 +614,7 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-/* Stats Grid */
+ 
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -669,7 +669,7 @@ body {
     color: var(--text-secondary);
 }
 
-/* Content Cards */
+ 
 .content-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -694,7 +694,7 @@ body {
     color: var(--text);
 }
 
-/* Tables */
+ 
 .table-responsive {
     overflow-x: auto;
     border-radius: var(--radius-sm);
@@ -747,7 +747,7 @@ body {
     background: var(--surface-hover);
 }
 
-/* Status Badges */
+ 
 .status-badge {
     display: inline-block;
     padding: 4px 12px;
@@ -773,7 +773,7 @@ body {
     color: var(--primary);
 }
 
-/* Pagination */
+ 
 .pagination {
     display: flex;
     justify-content: center;
@@ -808,7 +808,7 @@ body {
     border-color: var(--primary);
 }
 
-/* Modals */
+ 
 .modal {
     display: none;
     position: fixed;
@@ -980,7 +980,7 @@ body {
     font-weight: 600;
 }
 
-/* Form Grids */
+ 
 .grid-2 {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1031,7 +1031,7 @@ body {
     font-size: 0.9rem;
 }
 
-/* Notifications */
+ 
 .notification {
     position: fixed;
     top: 20px;
@@ -1079,7 +1079,7 @@ body {
     color: white;
 }
 
-/* Responsive Design */
+ 
 @media (max-width: 1200px) {
     .admin-main {
         grid-template-columns: 1fr;
@@ -1177,7 +1177,7 @@ body {
     }
 }
 
-/* Custom Scrollbar */
+ 
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
