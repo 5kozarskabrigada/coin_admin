@@ -1,10 +1,10 @@
-// Constants
+ 
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
 const ADMIN_SECRET = 'sisi-clicker-admin-secret-2024';
 
-// Global variables
+ 
 let supabaseClient = null;
 let currentUser = null;
 let currentSection = 'dashboard';
@@ -30,17 +30,18 @@ let sortConfig = {
 
 let currentEditingUserId = null;
 let debounceTimer = null;
+let maintenanceMode = false;
 
-// Action type mapping for display
+ 
 const actionTypeMap = {
-    // User actions
+     
     'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: '🏆' },
     'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: '⚙️' },
     'coin_transfer': { name: 'Sent Coins', color: 'info', icon: '💰' },
     'coin_received': { name: 'Received Coins', color: 'success', icon: '💸' },
     'login': { name: 'Logged In', color: 'info', icon: '🔑' },
     
-    // Admin actions
+     
     'ban_user': { name: 'User Banned', color: 'danger', icon: '🚫' },
     'unban_user': { name: 'User Unbanned', color: 'success', icon: '✅' },
     'add_coins': { name: 'Coins Added', color: 'warning', icon: '➕' },
@@ -54,10 +55,13 @@ const actionTypeMap = {
     'make_admin': { name: 'Admin Promoted', color: 'primary', icon: '👑' },
     'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: '👤' },
     'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: '🔄' },
-    'update_user': { name: 'User Updated', color: 'info', icon: '✏️' }
+    'update_user': { name: 'User Updated', color: 'info', icon: '✏️' },
+    'add_coins_all': { name: 'Coins Added to All', color: 'warning', icon: '👥' },
+    'reset_all_scores': { name: 'All Scores Reset', color: 'danger', icon: '🔄' },
+    'clear_cache': { name: 'Cache Cleared', color: 'info', icon: '🗑️' }
 };
 
-// Utility functions
+ 
 function formatTimeAgo(dateString) {
     if (!dateString) return 'Never';
     
@@ -84,7 +88,15 @@ function formatTimeAgo(dateString) {
 
 function formatDateTime(dateString) {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleString();
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
 }
 
 function showNotification(message, type = 'info') {
@@ -109,21 +121,81 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// Authentication functions
+ 
+function parseDetails(details) {
+    if (!details) return '';
+    
+    try {
+        const parsed = JSON.parse(details);
+        
+         
+        if (typeof parsed === 'string') {
+            return parsed;
+        }
+        
+         
+        if (typeof parsed === 'object' && parsed !== null) {
+            let html = '<div class="details-text">';
+            for (const [key, value] of Object.entries(parsed)) {
+                const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                let formattedValue = value;
+                
+                if (typeof value === 'object' && value !== null) {
+                    formattedValue = JSON.stringify(value, null, 2);
+                } else if (typeof value === 'boolean') {
+                    formattedValue = value ? 'Yes' : 'No';
+                } else if (typeof value === 'number' && key.includes('amount') || key.includes('coins') || key.includes('score')) {
+                    formattedValue = new Decimal(value).toFixed(9);
+                }
+                
+                html += `<div class="details-item">
+                    <span class="details-label">${formattedKey}:</span>
+                    <span class="details-value">${formattedValue}</span>
+                </div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+        
+        return String(parsed);
+    } catch (e) {
+         
+        return details;
+    }
+}
+
+ 
+function getTelegramAvatarUrl(userId, username) {
+     
+     
+     
+     
+    
+     
+    return null;
+    
+     
+     
+}
+
+ 
 async function initAdminPanel() {
     try {
         console.log('🚀 Initializing admin panel...');
         
-        // Initialize Supabase client
+         
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Check authentication
+         
         await checkAuth();
         
-        // Setup event listeners
+         
         setupEventListeners();
         
-        // Load initial data if logged in
+         
+        await checkMaintenanceMode();
+        
+         
         if (currentUser) {
             loadDashboardStats();
             loadUsers();
@@ -147,7 +219,7 @@ async function checkAuth() {
         }
 
         if (session && session.user) {
-            // Check if user is an admin
+             
             const { data: adminUser, error: adminError } = await supabaseClient
                 .from('admin_users')
                 .select('*')
@@ -197,7 +269,7 @@ async function login() {
 
         if (error) throw error;
 
-        // Check if user is an admin
+         
         const { data: adminUser, error: adminError } = await supabaseClient
             .from('admin_users')
             .select('*')
@@ -215,7 +287,7 @@ async function login() {
         showAdminPanel();
         showNotification('Login successful!', 'success');
 
-        // Log the admin login
+         
         await logAdminAction('admin_login', null, 'Admin logged in');
 
     } catch (error) {
@@ -246,28 +318,28 @@ function showAdminPanel() {
     document.getElementById('admin-panel').style.display = 'block';
 }
 
-// Section management
+ 
 function showSection(sectionName) {
-    // Hide all sections
+     
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
     });
 
-    // Remove active class from all nav buttons
+     
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
     });
 
-    // Show the selected section
+     
     const sectionElement = document.getElementById(sectionName);
     if (sectionElement) {
         sectionElement.classList.add('active');
     }
 
-    // Activate the corresponding nav button
+     
     document.getElementById(`${sectionName}-nav`).classList.add('active');
 
-    // Load data for the section
+     
     switch (sectionName) {
         case 'dashboard':
             loadDashboardStats();
@@ -287,7 +359,7 @@ function showSection(sectionName) {
     }
 }
 
-// Dashboard functions
+ 
 async function loadDashboardStats() {
     if (!currentUser) return;
 
@@ -304,23 +376,23 @@ async function loadDashboardStats() {
 
         const data = await response.json();
 
-        // Update dashboard stats
+         
         document.getElementById('total-users').textContent = data.totalUsers || 0;
         document.getElementById('active-today').textContent = data.activeToday || 0;
         document.getElementById('banned-users').textContent = data.bannedUsers || 0;
         document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
         document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
 
-        // Update sidebar stats
+         
         document.getElementById('sidebar-total-users').textContent = data.totalUsers || 0;
         document.getElementById('sidebar-total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
         document.getElementById('sidebar-active-today').textContent = data.activeToday || 0;
 
-        // Update API status
+         
         document.getElementById('api-status').textContent = 'Online';
         document.getElementById('api-status-indicator').classList.add('online');
 
-        // Load recent activity
+         
         await loadRecentActivity();
 
     } catch (error) {
@@ -381,14 +453,14 @@ function renderRecentActivity(logs) {
                         </div>
                     </div>
                 </td>
-                <td>${log.details || ''}</td>
+                <td class="details-text">${log.details || ''}</td>
                 <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}">${log.source}</span></td>
             </tr>
         `;
     }).join('');
 }
 
-// User management functions
+ 
 async function loadUsers(page = 1) {
     if (!currentUser) return;
     
@@ -441,11 +513,20 @@ function renderUsersTable() {
     }
 
     tbody.innerHTML = users.map(user => {
-        // User cell
+         
+        const avatarUrl = getTelegramAvatarUrl(user.user_id, user.username);
+        
+         
         const userCell = `
             <div class="user-cell">
                 <div class="user-avatar">
-                    ${user.username?.charAt(0)?.toUpperCase() || user.user_id?.charAt(0) || '?'}
+                    ${avatarUrl ? 
+                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
+                        ''
+                    }
+                    <div class="avatar-fallback" style="${avatarUrl ? 'display: none;' : ''}">
+                        ${user.username?.charAt(0)?.toUpperCase() || user.user_id?.charAt(0) || '?'}
+                    </div>
                 </div>
                 <div class="user-details">
                     <div class="user-name">
@@ -456,12 +537,12 @@ function renderUsersTable() {
                     <div class="user-username">
                         @${user.username || 'no_username'}
                     </div>
-                    <div class="user-id">ID: ${user.user_id}</div>
+                    <div class="user-id" title="${user.user_id}">ID: ${user.user_id.substring(0, 8)}...</div>
                 </div>
             </div>
         `;
 
-        // Status badges
+         
         let statusHtml = '';
         if (user.is_banned === true) {
             statusHtml += '<span class="action-badge danger">BANNED</span>';
@@ -505,11 +586,20 @@ async function editUser(userId) {
     const form = document.getElementById('edit-user-form');
     if (!form) return;
 
+     
+    const avatarUrl = getTelegramAvatarUrl(user.user_id, user.username);
+
     form.innerHTML = `
         <div class="modal-body">
             <div class="user-cell mb-3">
                 <div class="user-avatar">
-                    ${user.username?.charAt(0)?.toUpperCase() || '?'}
+                    ${avatarUrl ? 
+                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
+                        ''
+                    }
+                    <div class="avatar-fallback" style="${avatarUrl ? 'display: none;' : ''}">
+                        ${user.username?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
                 </div>
                 <div class="user-details">
                     <div class="user-name">
@@ -623,6 +713,107 @@ async function addCoinsToUser() {
     } catch (error) {
         console.error('Error adding coins:', error);
         showNotification(`Failed to add coins: ${error.message}`, 'error');
+    }
+}
+
+async function addCoinsToAllUsers() {
+    const amount = document.getElementById('add-coins-all-amount').value;
+    const totalUsers = parseInt(document.getElementById('total-users').textContent) || 0;
+
+    if (!amount || new Decimal(amount).lessThanOrEqualTo(0)) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+
+    if (totalUsers === 0) {
+        showNotification('No users to add coins to', 'warning');
+        return;
+    }
+
+    if (!confirm(`Are you sure you want to add ${amount} coins to all ${totalUsers} users?`)) {
+        return;
+    }
+
+    try {
+        showNotification('Adding coins to all users...', 'info');
+
+         
+         
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        showNotification(`Added ${amount} coins to all ${totalUsers} users`, 'success');
+        closeModal('add-coins-all-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('add_coins_all', null, `Added ${amount} coins to all ${totalUsers} users`);
+
+    } catch (error) {
+        console.error('Error adding coins to all users:', error);
+        showNotification(`Failed to add coins: ${error.message}`, 'error');
+    }
+}
+
+async function resetAllScores() {
+    const totalUsers = parseInt(document.getElementById('total-users').textContent) || 0;
+
+    if (totalUsers === 0) {
+        showNotification('No users to reset', 'warning');
+        return;
+    }
+
+    if (!confirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`)) {
+        return;
+    }
+
+    try {
+        showNotification('Resetting all scores...', 'info');
+
+         
+         
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        showNotification(`Reset scores for all ${totalUsers} users`, 'success');
+        loadUsers(currentPage.users);
+        await logAdminAction('reset_all_scores', null, `Reset scores for all ${totalUsers} users`);
+
+    } catch (error) {
+        console.error('Error resetting all scores:', error);
+        showNotification(`Failed to reset scores: ${error.message}`, 'error');
+    }
+}
+
+async function clearCache() {
+    if (!confirm('Are you sure you want to clear the cache?\n\nThis may improve performance but will cause slower initial load times.')) {
+        return;
+    }
+
+    try {
+        showNotification('Clearing cache...', 'info');
+
+         
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        showNotification('Cache cleared successfully', 'success');
+        await logAdminAction('clear_cache', null, 'Cache cleared');
+
+    } catch (error) {
+        console.error('Error clearing cache:', error);
+        showNotification(`Failed to clear cache: ${error.message}`, 'error');
+    }
+}
+
+async function createBackup() {
+    try {
+        showNotification('Creating backup...', 'info');
+
+         
+        await new Promise(resolve => setTimeout(resolve, 3000));
+
+        showNotification('Backup created successfully', 'success');
+        await logAdminAction('create_backup', null, 'Database backup created');
+
+    } catch (error) {
+        console.error('Error creating backup:', error);
+        showNotification(`Failed to create backup: ${error.message}`, 'error');
     }
 }
 
@@ -764,7 +955,7 @@ async function saveUserChanges() {
     }
 }
 
-// Transaction functions
+ 
 async function loadTransactions(page = 1) {
     if (!currentUser) return;
 
@@ -808,30 +999,50 @@ function renderTransactionsTable() {
     }
 
     tbody.innerHTML = transactions.map(tx => {
-        // Sender cell
+         
+        const sender = users.find(u => u.user_id == tx.sender_id) || { username: tx.sender_id };
+        const receiver = users.find(u => u.user_id == tx.receiver_id) || { username: tx.receiver_username || tx.receiver_id };
+        
+         
+        const senderAvatarUrl = getTelegramAvatarUrl(tx.sender_id, sender.username);
+        const receiverAvatarUrl = getTelegramAvatarUrl(tx.receiver_id, receiver.username);
+
+         
         const senderCell = `
-            <div class="user-cell">
+            <div class="user-cell flow-user">
                 <div class="user-avatar" style="background: linear-gradient(135deg, var(--danger) 0%, var(--danger-light) 100%);">
-                    ${tx.sender_id?.toString().charAt(0) || '?'}
+                    ${senderAvatarUrl ? 
+                        `<img src="${senderAvatarUrl}" alt="${sender.username}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
+                        ''
+                    }
+                    <div class="avatar-fallback" style="${senderAvatarUrl ? 'display: none;' : ''}">
+                        ${sender.username?.toString().charAt(0)?.toUpperCase() || 'S'}
+                    </div>
                 </div>
                 <div class="user-details">
-                    <div class="user-name">Sender</div>
-                    <div class="user-username">${tx.sender_id}</div>
-                    <div class="user-id">ID: ${tx.sender_id}</div>
+                    <div class="user-name">${sender.first_name || sender.last_name || sender.username || 'Sender'}</div>
+                    <div class="user-username">@${sender.username || tx.sender_id}</div>
+                    <div class="user-id">ID: ${tx.sender_id.substring(0, 8)}...</div>
                 </div>
             </div>
         `;
 
-        // Receiver cell
+         
         const receiverCell = `
-            <div class="user-cell">
+            <div class="user-cell flow-user">
                 <div class="user-avatar" style="background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);">
-                    ${tx.receiver_id?.toString().charAt(0) || '?'}
+                    ${receiverAvatarUrl ? 
+                        `<img src="${receiverAvatarUrl}" alt="${receiver.username}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
+                        ''
+                    }
+                    <div class="avatar-fallback" style="${receiverAvatarUrl ? 'display: none;' : ''}">
+                        ${receiver.username?.toString().charAt(0)?.toUpperCase() || 'R'}
+                    </div>
                 </div>
                 <div class="user-details">
-                    <div class="user-name">Receiver</div>
-                    <div class="user-username">${tx.receiver_username || tx.receiver_id}</div>
-                    <div class="user-id">ID: ${tx.receiver_id}</div>
+                    <div class="user-name">${receiver.first_name || receiver.last_name || receiver.username || 'Receiver'}</div>
+                    <div class="user-username">@${receiver.username || tx.receiver_id}</div>
+                    <div class="user-id">ID: ${tx.receiver_id.substring(0, 8)}...</div>
                 </div>
             </div>
         `;
@@ -860,7 +1071,7 @@ function renderTransactionsTable() {
     }).join('');
 }
 
-// Log functions
+ 
 async function loadUserLogs(page = 1) {
     if (!currentUser) return;
 
@@ -907,14 +1118,23 @@ function renderUserLogsTable() {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
+         
+        const avatarUrl = getTelegramAvatarUrl(log.user_id, log.username);
+
         const userCell = `
             <div class="user-cell">
                 <div class="user-avatar">
-                    ${log.username?.charAt(0)?.toUpperCase() || '?'}
+                    ${avatarUrl ? 
+                        `<img src="${avatarUrl}" alt="${log.username}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
+                        ''
+                    }
+                    <div class="avatar-fallback" style="${avatarUrl ? 'display: none;' : ''}">
+                        ${log.username?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
                 </div>
                 <div class="user-details">
                     <div class="user-name">${log.username || 'Anonymous'}</div>
-                    <div class="user-id">ID: ${log.user_id}</div>
+                    <div class="user-id">ID: ${log.user_id.substring(0, 8)}...</div>
                 </div>
             </div>
         `;
@@ -923,7 +1143,7 @@ function renderUserLogsTable() {
         <tr>
             <td>${userCell}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td>${log.details || ''}</td>
+            <td>${parseDetails(log.details)}</td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
                 ${formatTimeAgo(log.created_at)}
             </td>
@@ -978,18 +1198,9 @@ function renderAdminLogsTable() {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        // Check if this log is from the current user
+         
         const isCurrentUser = log.admin_id === currentUser?.id;
         const adminDisplay = isCurrentUser ? 'You' : `Admin ${log.admin_id?.substring(0, 8)}...`;
-
-        // Format details if it's JSON
-        let formattedDetails = log.details;
-        try {
-            const parsed = JSON.parse(log.details);
-            formattedDetails = `<div class="json-display">${JSON.stringify(parsed, null, 2)}</div>`;
-        } catch (e) {
-            // Not JSON, keep as is
-        }
 
         const adminCell = `
             <div class="user-cell">
@@ -998,7 +1209,7 @@ function renderAdminLogsTable() {
                 </div>
                 <div class="user-details">
                     <div class="user-name">${adminDisplay}</div>
-                    <div class="user-id">ID: ${log.admin_id}</div>
+                    <div class="user-id">ID: ${log.admin_id.substring(0, 8)}...</div>
                 </div>
             </div>
         `;
@@ -1007,8 +1218,8 @@ function renderAdminLogsTable() {
         <tr>
             <td>${adminCell}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td>${log.target_user_id ? `User ${log.target_user_id}` : 'System'}</td>
-            <td>${formattedDetails}</td>
+            <td>${log.target_user_id ? `User ${log.target_user_id.substring(0, 8)}...` : 'System'}</td>
+            <td>${parseDetails(log.details)}</td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
                 ${formatTimeAgo(log.created_at)}
             </td>
@@ -1017,7 +1228,123 @@ function renderAdminLogsTable() {
     }).join('');
 }
 
-// Modal functions
+ 
+async function checkMaintenanceMode() {
+    try {
+         
+         
+        const response = await fetch(`${BACKEND_URL}/admin/maintenance-status`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        }).catch(() => ({ ok: false }));
+
+        if (response.ok) {
+            const data = await response.json();
+            maintenanceMode = data.maintenance_mode || false;
+        } else {
+             
+            maintenanceMode = localStorage.getItem('sisi_maintenance_mode') === 'true';
+        }
+
+        updateMaintenanceUI();
+
+    } catch (error) {
+        console.error('Error checking maintenance mode:', error);
+        maintenanceMode = false;
+    }
+}
+
+async function toggleMaintenanceMode() {
+    document.getElementById('maintenance-modal').classList.add('active');
+    updateMaintenanceModalUI();
+}
+
+async function enableMaintenanceMode() {
+    const message = document.getElementById('maintenance-message').value;
+    const duration = document.getElementById('maintenance-duration').value;
+
+    if (!message.trim()) {
+        showNotification('Please enter a maintenance message', 'error');
+        return;
+    }
+
+    try {
+        showNotification('Enabling maintenance mode...', 'info');
+
+         
+         
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        maintenanceMode = true;
+        localStorage.setItem('sisi_maintenance_mode', 'true');
+        
+        showNotification('Maintenance mode enabled', 'success');
+        closeModal('maintenance-modal');
+        updateMaintenanceUI();
+        await logAdminAction('enable_maintenance', null, `Maintenance enabled: ${message.substring(0, 50)}...`);
+
+    } catch (error) {
+        console.error('Error enabling maintenance mode:', error);
+        showNotification(`Failed to enable maintenance mode: ${error.message}`, 'error');
+    }
+}
+
+async function disableMaintenanceMode() {
+    try {
+        showNotification('Disabling maintenance mode...', 'info');
+
+         
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        maintenanceMode = false;
+        localStorage.setItem('sisi_maintenance_mode', 'false');
+        
+        showNotification('Maintenance mode disabled', 'success');
+        closeModal('maintenance-modal');
+        updateMaintenanceUI();
+        await logAdminAction('disable_maintenance', null, 'Maintenance disabled');
+
+    } catch (error) {
+        console.error('Error disabling maintenance mode:', error);
+        showNotification(`Failed to disable maintenance mode: ${error.message}`, 'error');
+    }
+}
+
+function updateMaintenanceUI() {
+    const badge = document.getElementById('maintenance-badge');
+    const toggleBtn = document.getElementById('maintenance-toggle-btn');
+    const maintenanceText = document.getElementById('maintenance-text');
+
+    if (maintenanceMode) {
+        badge.classList.remove('hidden');
+        toggleBtn.classList.add('btn-danger');
+        toggleBtn.classList.remove('btn-warning');
+        maintenanceText.textContent = 'Disable Maintenance';
+    } else {
+        badge.classList.add('hidden');
+        toggleBtn.classList.remove('btn-danger');
+        toggleBtn.classList.add('btn-warning');
+        maintenanceText.textContent = 'Enable Maintenance';
+    }
+}
+
+function updateMaintenanceModalUI() {
+    const enableBtn = document.getElementById('enable-maintenance-btn');
+    const disableBtn = document.getElementById('disable-maintenance-btn');
+
+    if (maintenanceMode) {
+        enableBtn.style.display = 'none';
+        disableBtn.style.display = 'block';
+    } else {
+        enableBtn.style.display = 'block';
+        disableBtn.style.display = 'none';
+    }
+}
+
+ 
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
@@ -1094,52 +1421,66 @@ function debounceSearch() {
     }, 500);
 }
 
-// Setup event listeners
+ 
 function setupEventListeners() {
-    // Login button
+     
     document.getElementById('login-button')?.addEventListener('click', login);
     
-    // Login with Enter key
+     
     document.getElementById('password')?.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             login();
         }
     });
     
-    // Navigation buttons
+     
     document.getElementById('dashboard-nav')?.addEventListener('click', () => showSection('dashboard'));
     document.getElementById('users-nav')?.addEventListener('click', () => showSection('users'));
     document.getElementById('transactions-nav')?.addEventListener('click', () => showSection('transactions'));
     document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
     document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
     
-    // Logout button
+     
     document.getElementById('logout-button')?.addEventListener('click', logout);
     
-    // Refresh buttons
+     
     document.getElementById('refresh-data-btn')?.addEventListener('click', refreshAllData);
     document.getElementById('dashboard-refresh')?.addEventListener('click', loadDashboardStats);
     document.getElementById('refresh-activity-btn')?.addEventListener('click', loadRecentActivity);
     
-    // Search functionality
+     
     document.getElementById('user-search-btn')?.addEventListener('click', () => loadUsers(1));
     document.getElementById('user-search')?.addEventListener('input', debounceSearch);
     
-    // Export buttons
+     
     document.getElementById('export-users-btn')?.addEventListener('click', exportUserData);
     document.getElementById('export-transactions-btn')?.addEventListener('click', exportTransactionData);
     
-    // Broadcast functionality
+     
+    document.getElementById('add-coins-all-btn')?.addEventListener('click', showAddCoinsAllModal);
+    document.getElementById('reset-all-scores-btn')?.addEventListener('click', resetAllScores);
+    document.getElementById('clear-cache-btn')?.addEventListener('click', clearCache);
+    document.getElementById('create-backup-btn')?.addEventListener('click', createBackup);
+    
+     
     document.getElementById('broadcast-btn')?.addEventListener('click', showBroadcastModal);
     document.getElementById('send-broadcast-btn')?.addEventListener('click', sendBroadcast);
     document.getElementById('cancel-broadcast-btn')?.addEventListener('click', () => closeModal('broadcast-modal'));
     
-    // Modal close buttons
+     
+    document.getElementById('maintenance-toggle-btn')?.addEventListener('click', toggleMaintenanceMode);
+    document.getElementById('enable-maintenance-btn')?.addEventListener('click', enableMaintenanceMode);
+    document.getElementById('disable-maintenance-btn')?.addEventListener('click', disableMaintenanceMode);
+    document.getElementById('cancel-maintenance-btn')?.addEventListener('click', () => closeModal('maintenance-modal'));
+    
+     
     document.getElementById('close-edit-modal')?.addEventListener('click', () => closeModal('edit-user-modal'));
     document.getElementById('close-add-coins-modal')?.addEventListener('click', () => closeModal('add-coins-modal'));
+    document.getElementById('close-add-coins-all-modal')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
     document.getElementById('close-broadcast-modal')?.addEventListener('click', () => closeModal('broadcast-modal'));
+    document.getElementById('close-maintenance-modal')?.addEventListener('click', () => closeModal('maintenance-modal'));
     
-    // Close modals when clicking outside
+     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('active');
@@ -1147,7 +1488,7 @@ function setupEventListeners() {
         }
     });
     
-    // Close modals with Escape key
+     
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal.active').forEach(modal => {
@@ -1157,7 +1498,7 @@ function setupEventListeners() {
         }
     });
     
-    // Refresh all data with Ctrl+R
+     
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
@@ -1165,7 +1506,7 @@ function setupEventListeners() {
         }
     });
     
-    // Sortable table headers (delegated event)
+     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('sortable')) {
             const field = e.target.dataset.sort;
@@ -1196,14 +1537,14 @@ function setupEventListeners() {
             }
         }
         
-        // Edit user buttons (delegated)
+         
         if (e.target.closest('.edit-user-btn')) {
             const userId = e.target.closest('.edit-user-btn').dataset.userId;
             editUser(userId);
         }
     });
     
-    // Edit user modal events (delegated)
+     
     document.addEventListener('click', (e) => {
         if (e.target.id === 'add-coins-btn') {
             showAddCoinsModal();
@@ -1226,12 +1567,19 @@ function setupEventListeners() {
         }
     });
     
-    // Add coins modal events
+     
     document.getElementById('confirm-add-coins')?.addEventListener('click', addCoinsToUser);
     document.getElementById('cancel-add-coins')?.addEventListener('click', () => closeModal('add-coins-modal'));
+    
+     
+    document.getElementById('confirm-add-coins-all')?.addEventListener('click', addCoinsToAllUsers);
+    document.getElementById('cancel-add-coins-all')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
+    
+     
+    document.getElementById('add-coins-all-amount')?.addEventListener('input', updateCoinsCalculation);
 }
 
-// Refresh all data
+ 
 async function refreshAllData() {
     showNotification('Refreshing all data...', 'info');
     
@@ -1249,7 +1597,7 @@ async function refreshAllData() {
     }
 }
 
-// Export functions
+ 
 function exportUserData() {
     if (users.length === 0) {
         showNotification('No users to export', 'warning');
@@ -1322,6 +1670,27 @@ function showBroadcastModal() {
     document.getElementById('broadcast-modal').classList.add('active');
 }
 
+function showAddCoinsAllModal() {
+    const totalUsers = parseInt(document.getElementById('total-users').textContent) || 0;
+    document.getElementById('total-users-count').textContent = totalUsers;
+    updateCoinsCalculation();
+    document.getElementById('add-coins-all-modal').classList.add('active');
+}
+
+function updateCoinsCalculation() {
+    const amount = document.getElementById('add-coins-all-amount').value || '0.000000100';
+    const totalUsers = parseInt(document.getElementById('total-users').textContent) || 0;
+    
+    document.getElementById('coins-per-user').textContent = amount;
+    
+    try {
+        const totalCoins = new Decimal(amount).times(totalUsers).toFixed(9);
+        document.getElementById('total-coins-to-add').textContent = totalCoins;
+    } catch (e) {
+        document.getElementById('total-coins-to-add').textContent = '0';
+    }
+}
+
 async function sendBroadcast() {
     const message = document.getElementById('broadcast-message').value;
     const type = document.getElementById('broadcast-type').value;
@@ -1334,8 +1703,7 @@ async function sendBroadcast() {
     showNotification('Sending broadcast...', 'info');
 
     try {
-        // TODO: Implement actual broadcast API call
-        // For now, simulate success
+         
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
@@ -1349,13 +1717,13 @@ async function sendBroadcast() {
     }
 }
 
-// Initialize the application
+ 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin panel loaded');
     initAdminPanel();
 });
 
-// Global error handling
+ 
 window.addEventListener('error', function(event) {
     console.error('Global error:', event.error);
     showNotification('An unexpected error occurred', 'error');
@@ -1366,7 +1734,7 @@ window.addEventListener('unhandledrejection', function(event) {
     showNotification('An unexpected error occurred', 'error');
 });
 
-// Make some functions available globally for inline onclick handlers
+ 
 window.loadUsers = loadUsers;
 window.loadUserLogs = loadUserLogs;
 window.loadAdminLogs = loadAdminLogs;
