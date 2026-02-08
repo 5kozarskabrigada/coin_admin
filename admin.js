@@ -170,6 +170,7 @@ async function initAdminPanel() {
         await checkAuth();
         
         setupEventListeners();
+        setupSearchListeners();
         
         await checkMaintenanceMode();
         
@@ -402,6 +403,154 @@ async function loadRecentActivity() {
     } catch (error) {
         console.error('Error loading recent activity:', error);
     }
+}
+
+
+
+function setupSearchListeners() {
+ 
+  const userLogsSearch = document.getElementById('user-logs-search');
+  if (userLogsSearch) {
+    userLogsSearch.addEventListener('input', (e) => {
+      filterTable('user-logs-tbody', e.target.value);
+    });
+  }
+ 
+  const transactionsSearch = document.getElementById('transactions-search');
+  if (transactionsSearch) {
+    transactionsSearch.addEventListener('input', (e) => {
+      filterTable('transactions-tbody', e.target.value);
+    });
+  }
+ 
+  const adminLogsSearch = document.getElementById('admin-logs-search');
+  if (adminLogsSearch) {
+    adminLogsSearch.addEventListener('input', (e) => {
+      filterTable('admin-logs-tbody', e.target.value);
+    });
+  }
+ 
+  const userLogsFilter = document.getElementById('user-logs-action-filter');
+  if (userLogsFilter) {
+    userLogsFilter.addEventListener('change', (e) => {
+      filterTableByAction('user-logs-tbody', e.target.value);
+    });
+  }
+
+  const adminLogsFilter = document.getElementById('admin-logs-action-filter');
+  if (adminLogsFilter) {
+    adminLogsFilter.addEventListener('change', (e) => {
+      filterTableByAction('admin-logs-tbody', e.target.value);
+    });
+  }
+}
+
+function filterTable(tbodyId, searchTerm) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  const rows = tbody.querySelectorAll('tr');
+  const term = searchTerm.toLowerCase();
+
+  rows.forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = text.includes(term) ? '' : 'none';
+  });
+}
+
+function filterTableByAction(tbodyId, actionType) {
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+
+  const rows = tbody.querySelectorAll('tr');
+
+  rows.forEach(row => {
+    if (!actionType) {
+      row.style.display = '';
+      return;
+    }
+
+    const actionBadge = row.querySelector('.action-badge');
+    if (actionBadge) {
+      const text = actionBadge.textContent.toLowerCase();
+      const matches = actionType.toLowerCase().split('_').every(part => text.includes(part));
+      row.style.display = matches ? '' : 'none';
+    }
+  });
+}
+
+
+
+function formatUserInfo(user) {
+  const hasFirst = user.first_name && user.first_name.trim().length > 0;
+  const hasLast = user.last_name && user.last_name.trim().length > 0;
+  const displayName = hasFirst
+    ? `${user.first_name}${hasLast ? ' ' + user.last_name : ''}`
+    : (user.username || 'Anonymous');
+  
+  const username = user.username ? `@${user.username}` : '';
+  const userId = user.user_id ? String(user.user_id).substring(0, 8) + '...' : '';
+
+  return `
+    <div class="user-info-compact">
+      <div class="user-name">${escapeHtml(displayName)}</div>
+      ${username ? `<div class="user-username">${escapeHtml(username)}</div>` : ''}
+      ${userId ? `<div class="user-id">ID: ${userId}</div>` : ''}
+    </div>
+  `;
+}
+
+
+function parseDetailsEnhanced(details) {
+  if (!details) return '';
+  
+  try {
+    const parsed = JSON.parse(details);
+     
+    if (typeof parsed === 'string') {
+      return `<div class="details-parsed">${escapeHtml(parsed)}</div>`;
+    }
+     
+    if (typeof parsed === 'object' && parsed !== null) {
+      let html = '<div class="details-parsed">';
+      
+      for (const [key, value] of Object.entries(parsed)) {
+        const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        let formattedValue = value;
+         
+        if (typeof value === 'number') {
+          if (key.includes('amount') || key.includes('coins') || key.includes('score')) {
+            formattedValue = new Decimal(value).toFixed(9);
+          }
+        }
+         
+        if (typeof value === 'boolean') {
+          formattedValue = value ? '✓ Yes' : '✗ No';
+        }
+        
+        html += `
+          <div class="detail-row">
+            <span class="detail-label">${formattedKey}:</span>
+            <span class="detail-value">${escapeHtml(String(formattedValue))}</span>
+          </div>
+        `;
+      }
+      
+      html += '</div>';
+      return html;
+    }
+    
+    return `<div class="details-parsed">${escapeHtml(String(parsed))}</div>`;
+  } catch (e) {
+ 
+    return `<div class="details-parsed">${escapeHtml(details)}</div>`;
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 function renderRecentActivity(logs) {
@@ -958,79 +1107,53 @@ async function loadTransactions(page = 1) {
     }
 }
 
+
 function renderTransactionsTable() {
-    const tbody = document.getElementById('transactions-tbody');
-    if (!tbody) return;
+  const tbody = document.getElementById('transactions-tbody');
+  if (!tbody) return;
 
-    if (transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
-        return;
-    }
+  if (transactions.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
+    return;
+  }
 
-    tbody.innerHTML = transactions.map(tx => {
-        const senderAvatarUrl = tx.sender_avatar || null;
-        const receiverAvatarUrl = tx.receiver_avatar || null;
+  tbody.innerHTML = transactions.map(tx => {
+    const senderInfo = formatUserInfo({
+      first_name: tx.sender_name,
+      username: tx.sender_username,
+      user_id: tx.sender_id
+    });
 
-        const senderCell = `
-            <div class="user-cell flow-user">
-                <div class="user-avatar" style="background: linear-gradient(135deg, var(--danger) 0%, var(--danger-light) 100%);">
-                    ${senderAvatarUrl ? 
-                        `<img src="${senderAvatarUrl}" alt="${tx.sender_username}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
-                        ''
-                    }
-                    <div class="avatar-fallback" style="${senderAvatarUrl ? 'display: none;' : ''}">
-                        ${tx.sender_name?.charAt(0)?.toUpperCase() || 'S'}
-                    </div>
-                </div>
-                <div class="user-details">
-                    <div class="user-name">${tx.sender_name || 'Sender'}</div>
-                    <div class="user-username">@${tx.sender_username || tx.sender_id}</div>
-                    <div class="user-id">ID: ${String(tx.sender_id).substring(0, 8)}...</div>
-                </div>
-            </div>
-        `;
+    const receiverInfo = formatUserInfo({
+      first_name: tx.receiver_name,
+      username: tx.receiver_username,
+      user_id: tx.receiver_id
+    });
 
-        const receiverCell = `
-            <div class="user-cell flow-user">
-                <div class="user-avatar" style="background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);">
-                    ${receiverAvatarUrl ? 
-                        `<img src="${receiverAvatarUrl}" alt="${tx.receiver_username}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
-                        ''
-                    }
-                    <div class="avatar-fallback" style="${receiverAvatarUrl ? 'display: none;' : ''}">
-                        ${tx.receiver_name?.charAt(0)?.toUpperCase() || 'R'}
-                    </div>
-                </div>
-                <div class="user-details">
-                    <div class="user-name">${tx.receiver_name || 'Receiver'}</div>
-                    <div class="user-username">@${tx.receiver_username || tx.receiver_id}</div>
-                    <div class="user-id">ID: ${String(tx.receiver_id).substring(0, 8)}...</div>
-                </div>
-            </div>
-        `;
-
-        const flowDisplay = `
-            <div class="transaction-flow">
-                ${senderCell}
-                <div class="flow-direction">→</div>
-                ${receiverCell}
-            </div>
-        `;
-
-        return `
-        <tr>
-            <td>${flowDisplay}</td>
-            <td>
-                <span class="flow-amount">
-                    <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
-                </span>
-            </td>
-            <td class="timestamp" title="${formatDateTime(tx.created_at)}">
-                ${formatTimeAgo(tx.created_at)}
-            </td>
-        </tr>
-        `;
-    }).join('');
+    return `
+    <tr>
+      <td>
+        <div class="transaction-flow-compact">
+          <div class="flow-user-compact">
+            <strong>From:</strong> ${senderInfo}
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-user-compact">
+            <strong>To:</strong> ${receiverInfo}
+          </div>
+        </div>
+      </td>
+      <td>
+        <span class="flow-amount">
+          <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
+        </span>
+      </td>
+      <td class="timestamp" title="${formatDateTime(tx.created_at)}">
+        ${formatTimeAgo(tx.created_at)}
+      </td>
+    </tr>
+    `;
+  }).join('');
 }
 
 async function loadUserLogs(page = 1) {
@@ -1066,50 +1189,38 @@ async function loadUserLogs(page = 1) {
     }
 }
 
+
 function renderUserLogsTable() {
-    const tbody = document.getElementById('user-logs-tbody');
-    if (!tbody) return;
+  const tbody = document.getElementById('user-logs-tbody');
+  if (!tbody) return;
 
-    if (userLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
-        return;
-    }
+  if (userLogs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
+    return;
+  }
 
-    tbody.innerHTML = userLogs.map(log => {
-        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
-        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+  tbody.innerHTML = userLogs.map(log => {
+    const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+    const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        const avatarUrl = log.profile_photo_url || null;
+    const userInfo = formatUserInfo({
+      first_name: log.first_name,
+      last_name: log.last_name,
+      username: log.username,
+      user_id: log.user_id
+    });
 
-        const userCell = `
-            <div class="user-cell">
-                <div class="user-avatar">
-                    ${avatarUrl ? 
-                        `<img src="${avatarUrl}" alt="${log.username}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
-                        ''
-                    }
-                    <div class="avatar-fallback" style="${avatarUrl ? 'display: none;' : ''}">
-                        ${log.first_name?.charAt(0)?.toUpperCase() || log.username?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
-                </div>
-                <div class="user-details">
-                    <div class="user-name">${log.first_name || log.last_name ? `${log.first_name || ''} ${log.last_name || ''}`.trim() : log.username || 'Anonymous'}</div>
-                    <div class="user-id">ID: ${String(log.user_id).substring(0, 8)}...</div>
-                </div>
-            </div>
-        `;
-
-        return `
-        <tr>
-            <td>${userCell}</td>
-            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td>${parseDetails(log.details)}</td>
-            <td class="timestamp" title="${formatDateTime(log.created_at)}">
-                ${formatTimeAgo(log.created_at)}
-            </td>
-        </tr>
-        `;
-    }).join('');
+    return `
+    <tr>
+      <td>${userInfo}</td>
+      <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+      <td class="col-wide">${parseDetailsEnhanced(log.details)}</td>
+      <td class="timestamp" title="${formatDateTime(log.created_at)}">
+        ${formatTimeAgo(log.created_at)}
+      </td>
+    </tr>
+    `;
+  }).join('');
 }
 
 async function loadAdminLogs(page = 1) {
@@ -1145,47 +1256,46 @@ async function loadAdminLogs(page = 1) {
     }
 }
 
+
 function renderAdminLogsTable() {
-    const tbody = document.getElementById('admin-logs-tbody');
-    if (!tbody) return;
+  const tbody = document.getElementById('admin-logs-tbody');
+  if (!tbody) return;
 
-    if (adminLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
-        return;
-    }
+  if (adminLogs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
+    return;
+  }
 
-    tbody.innerHTML = adminLogs.map(log => {
-        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
-        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+  tbody.innerHTML = adminLogs.map(log => {
+    const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+    const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        const isCurrentUser = log.admin_id === currentUser?.id;
-        const adminDisplay = isCurrentUser ? 'You' : `Admin ${String(log.admin_id).substring(0, 8)}...`;
+    const isCurrentUser = log.admin_id === currentUser?.id;
+    const adminDisplay = isCurrentUser ? 'You' : `Admin ${String(log.admin_id).substring(0, 8)}...`;
 
-        const adminCell = `
-            <div class="user-cell">
-                <div class="user-avatar" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);">
-                    ${isCurrentUser ? 'Y' : 'A'}
-                </div>
-                <div class="user-details">
-                    <div class="user-name">${adminDisplay}</div>
-                    <div class="user-id">ID: ${String(log.admin_id).substring(0, 8)}...</div>
-                </div>
-            </div>
-        `;
+    const targetDisplay = log.target_user_id 
+      ? `User ${String(log.target_user_id).substring(0, 8)}...`
+      : 'System';
 
-        return `
-        <tr>
-            <td>${adminCell}</td>
-            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td>${log.target_user_id ? `User ${String(log.target_user_id).substring(0, 8)}...` : 'System'}</td>
-            <td>${parseDetails(log.formatted_details || log.details)}</td>
-            <td class="timestamp" title="${formatDateTime(log.created_at)}">
-                ${formatTimeAgo(log.created_at)}
-            </td>
-        </tr>
-        `;
-    }).join('');
+    return `
+    <tr>
+      <td>
+        <div class="user-info-compact">
+          <div class="user-name">${adminDisplay}</div>
+          <div class="user-id">ID: ${String(log.admin_id).substring(0, 8)}...</div>
+        </div>
+      </td>
+      <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+      <td>${targetDisplay}</td>
+      <td class="col-wide">${parseDetailsEnhanced(log.formatted_details || log.details)}</td>
+      <td class="timestamp" title="${formatDateTime(log.created_at)}">
+        ${formatTimeAgo(log.created_at)}
+      </td>
+    </tr>
+    `;
+  }).join('');
 }
+
 
 async function checkMaintenanceMode() {
     try {

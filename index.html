@@ -761,6 +761,148 @@
             width: 100%;
         }
 
+        .user-info-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+}
+
+        .user-info-compact .user-name {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text-primary);
+        }
+
+        .user-info-compact .user-username {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        }
+
+        .user-info-compact .user-id {
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        font-family: monospace;
+        }
+        
+        .data-table td.timestamp,
+        .data-table th.timestamp-header {
+        text-align: center !important;
+        vertical-align: middle !important;
+        }
+        
+        .details-parsed {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        }
+
+        .details-parsed .detail-row {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 4px;
+        }
+
+        .details-parsed .detail-label {
+        color: var(--primary);
+        font-weight: 600;
+        min-width: 80px;
+        }
+
+        .details-parsed .detail-value {
+        color: var(--text-primary);
+        flex: 1;
+        }
+        
+        .table-search-container {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+        align-items: center;
+        }
+
+        .table-search-input {
+        flex: 1;
+        padding: 8px 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        }
+
+        .table-search-input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+        
+        .table-filter-select {
+        padding: 8px 12px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        min-width: 150px;
+        }
+        
+        .data-table th,
+        .data-table td {
+        max-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        }
+
+        .data-table th.col-wide,
+        .data-table td.col-wide {
+        max-width: none;
+        white-space: normal;
+        }
+        
+        .btn.btn-primary.btn-sm {
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        border-radius: 6px;
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        border: none;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        }
+
+        .btn.btn-primary.btn-sm:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(125, 60, 152, 0.3);
+        }
+
+        .participants-container::-webkit-scrollbar,
+        .table-responsive::-webkit-scrollbar {
+        width: 6px;
+        }
+
+        .participants-container::-webkit-scrollbar-track,
+        .table-responsive::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 3px;
+        }
+
+        .participants-container::-webkit-scrollbar-thumb,
+        .table-responsive::-webkit-scrollbar-thumb {
+        background: rgba(125, 60, 152, 0.4);
+        border-radius: 3px;
+        }
+
+        .participants-container::-webkit-scrollbar-thumb:hover,
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: rgba(125, 60, 152, 0.6);
+        }
+
+
         .stat-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -828,6 +970,31 @@
         .stat-change {
             font-size: 0.75rem;
             color: var(--text-secondary);
+        }
+
+        .transaction-flow-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        }
+
+        .flow-user-compact {
+        display: flex;
+        gap: 0.5rem;
+        align-items: flex-start;
+        }
+
+        .flow-user-compact strong {
+        min-width: 40px;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        }
+
+        .flow-arrow {
+        color: var(--primary);
+        font-weight: bold;
+        padding: 0.25rem 0;
+        text-align: center;
         }
 
         .content-card {
@@ -1851,15 +2018,20 @@
                 </div>
 
                 <div id="transactions" class="section">
-                    <div class="content-header">
-                        <h1 class="page-title">Transaction History</h1>
-                        <div class="header-actions">
-                            <button class="btn btn-info btn-sm" id="export-transactions-btn">
-                                <i class="fas fa-download"></i>
-                                Export
-                            </button>
-                        </div>
+                <div class="content-header">
+                    <h1 class="page-title">Transaction History</h1>
+                    <div class="table-search-container">
+                    <input 
+                        type="text" 
+                        id="transactions-search" 
+                        class="table-search-input" 
+                        placeholder="Search by user, amount..."
+                    />
+                    <button class="btn btn-info btn-sm" id="export-transactions-btn">
+                        <i class="fas fa-download"></i> Export
+                    </button>
                     </div>
+                </div>
                     
                     <div class="content-card">
                         <div class="table-responsive">
@@ -1881,10 +2053,24 @@
                     </div>
                 </div>
 
-                <div id="user-logs" class="section">
-                    <div class="content-header">
-                        <h1 class="page-title">User Activity Logs</h1>
+                <div d="user-logs" class="section">
+                <div class="content-header">
+                    <h1 class="page-title">User Activity Logs</h1>
+                    <div class="table-search-container">
+                    <input 
+                        type="text" 
+                        id="user-logs-search" 
+                        class="table-search-input" 
+                        placeholder="Search by user, action, details..."
+                    />
+                    <select id="user-logs-action-filter" class="table-filter-select">
+                        <option value="">All Actions</option>
+                        <option value="solo_lottery_win">Lottery Wins</option>
+                        <option value="upgrade_purchase">Upgrades</option>
+                        <option value="coin_transfer">Transfers</option>
+                    </select>
                     </div>
+                </div>
                     
                     <div class="content-card">
                         <div class="table-responsive">
@@ -1908,10 +2094,23 @@
                 </div>
 
                 <div id="admin-logs" class="section">
-                    <div class="content-header">
-                        <h1 class="page-title">Admin Activity Logs</h1>
+                <div class="content-header">
+                    <h1 class="page-title">Admin Activity Logs</h1>
+                    <div class="table-search-container">
+                    <input 
+                        type="text" 
+                        id="admin-logs-search" 
+                        class="table-search-input" 
+                        placeholder="Search by admin, action, target..."
+                    />
+                    <select id="admin-logs-action-filter" class="table-filter-select">
+                        <option value="">All Actions</option>
+                        <option value="ban_user">Bans</option>
+                        <option value="add_coins">Coin Additions</option>
+                        <option value="delete_user">Deletions</option>
+                    </select>
                     </div>
-                    
+                </div>
                     <div class="content-card">
                         <div class="table-responsive">
                             <table class="data-table">
