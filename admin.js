@@ -93,6 +93,9 @@ function formatDateTime(dateString) {
 }
 
 function showNotification(message, type = 'info') {
+     
+    document.querySelectorAll('.notification').forEach(n => n.remove());
+    
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.innerHTML = `
@@ -134,7 +137,7 @@ function parseDetails(details) {
                     formattedValue = JSON.stringify(value, null, 2);
                 } else if (typeof value === 'boolean') {
                     formattedValue = value ? 'Yes' : 'No';
-                } else if (typeof value === 'number' && key.includes('amount') || key.includes('coins') || key.includes('score')) {
+                } else if (typeof value === 'number' && (key.includes('amount') || key.includes('coins') || key.includes('score'))) {
                     formattedValue = new Decimal(value).toFixed(9);
                 }
                 
@@ -165,6 +168,7 @@ async function initAdminPanel() {
     try {
         console.log('🚀 Initializing admin panel...');
         
+         
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         await checkAuth();
@@ -373,14 +377,14 @@ async function loadDashboardStats() {
         document.getElementById('sidebar-active-today').textContent = data.activeToday || 0;
 
         document.getElementById('api-status').textContent = 'Online';
-        document.getElementById('api-status-indicator').classList.add('online');
+        document.getElementById('api-status-indicator').className = 'status-indicator online';
 
         await loadRecentActivity();
 
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
         document.getElementById('api-status').textContent = 'Offline';
-        document.getElementById('api-status-indicator').classList.remove('online');
+        document.getElementById('api-status-indicator').className = 'status-indicator';
         showNotification('Failed to load dashboard data', 'error');
     }
 }
@@ -405,186 +409,139 @@ async function loadRecentActivity() {
     }
 }
 
-
-
 function setupSearchListeners() {
- 
-  const userLogsSearch = document.getElementById('user-logs-search');
-  if (userLogsSearch) {
-    userLogsSearch.addEventListener('input', (e) => {
-      filterTable('user-logs-tbody', e.target.value);
-    });
-  }
- 
-  const transactionsSearch = document.getElementById('transactions-search');
-  if (transactionsSearch) {
-    transactionsSearch.addEventListener('input', (e) => {
-      filterTable('transactions-tbody', e.target.value);
-    });
-  }
- 
-  const adminLogsSearch = document.getElementById('admin-logs-search');
-  if (adminLogsSearch) {
-    adminLogsSearch.addEventListener('input', (e) => {
-      filterTable('admin-logs-tbody', e.target.value);
-    });
-  }
- 
-  const userLogsFilter = document.getElementById('user-logs-action-filter');
-  if (userLogsFilter) {
-    userLogsFilter.addEventListener('change', (e) => {
-      filterTableByAction('user-logs-tbody', e.target.value);
-    });
-  }
+     
+    const userLogsSearch = document.getElementById('user-logs-search');
+    if (userLogsSearch) {
+        userLogsSearch.addEventListener('input', (e) => {
+            filterTable('user-logs-tbody', e.target.value);
+        });
+    }
+    
+     
+    const transactionsSearch = document.getElementById('transactions-search');
+    if (transactionsSearch) {
+        transactionsSearch.addEventListener('input', (e) => {
+            filterTable('transactions-tbody', e.target.value);
+        });
+    }
+    
+     
+    const adminLogsSearch = document.getElementById('admin-logs-search');
+    if (adminLogsSearch) {
+        adminLogsSearch.addEventListener('input', (e) => {
+            filterTable('admin-logs-tbody', e.target.value);
+        });
+    }
+    
+     
+    const userLogsFilter = document.getElementById('user-logs-action-filter');
+    if (userLogsFilter) {
+        userLogsFilter.addEventListener('change', (e) => {
+            filterTableByAction('user-logs-tbody', e.target.value);
+        });
+    }
 
-  const adminLogsFilter = document.getElementById('admin-logs-action-filter');
-  if (adminLogsFilter) {
-    adminLogsFilter.addEventListener('change', (e) => {
-      filterTableByAction('admin-logs-tbody', e.target.value);
-    });
-  }
+     
+    const adminLogsFilter = document.getElementById('admin-logs-action-filter');
+    if (adminLogsFilter) {
+        adminLogsFilter.addEventListener('change', (e) => {
+            filterTableByAction('admin-logs-tbody', e.target.value);
+        });
+    }
 }
 
 function filterTable(tbodyId, searchTerm) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
 
-  const rows = tbody.querySelectorAll('tr');
-  const term = searchTerm.toLowerCase();
+    const rows = tbody.querySelectorAll('tr');
+    const term = searchTerm.toLowerCase();
 
-  rows.forEach(row => {
-    const text = row.textContent.toLowerCase();
-    row.style.display = text.includes(term) ? '' : 'none';
-  });
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+    });
 }
 
 function filterTableByAction(tbodyId, actionType) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
+    const tbody = document.getElementById(tbodyId);
+    if (!tbody) return;
 
-  const rows = tbody.querySelectorAll('tr');
+    const rows = tbody.querySelectorAll('tr');
 
-  rows.forEach(row => {
-    if (!actionType) {
-      row.style.display = '';
-      return;
-    }
+    rows.forEach(row => {
+        if (!actionType) {
+            row.style.display = '';
+            return;
+        }
 
-    const actionBadge = row.querySelector('.action-badge');
-    if (actionBadge) {
-      const text = actionBadge.textContent.toLowerCase();
-      const matches = actionType.toLowerCase().split('_').every(part => text.includes(part));
-      row.style.display = matches ? '' : 'none';
-    }
-  });
+        const actionBadge = row.querySelector('.action-badge');
+        if (actionBadge) {
+            const text = actionBadge.textContent.toLowerCase();
+            const matches = actionType.toLowerCase().split('_').every(part => text.includes(part));
+            row.style.display = matches ? '' : 'none';
+        }
+    });
 }
-
-
 
 function formatUserInfo(user) {
-  const hasFirst = user.first_name && user.first_name.trim().length > 0;
-  const hasLast = user.last_name && user.last_name.trim().length > 0;
-  const displayName = hasFirst
-    ? `${user.first_name}${hasLast ? ' ' + user.last_name : ''}`
-    : (user.username || 'Anonymous');
-  
-  const username = user.username ? `@${user.username}` : '';
-  const userId = user.user_id ? String(user.user_id).substring(0, 8) + '...' : '';
-
-  return `
-    <div class="user-info-compact">
-      <div class="user-name">${escapeHtml(displayName)}</div>
-      ${username ? `<div class="user-username">${escapeHtml(username)}</div>` : ''}
-      ${userId ? `<div class="user-id">ID: ${userId}</div>` : ''}
-    </div>
-  `;
-}
-
-
-function parseDetailsEnhanced(details) {
-  if (!details) return '';
-  
-  try {
-    const parsed = JSON.parse(details);
-     
-    if (typeof parsed === 'string') {
-      return `<div class="details-parsed">${escapeHtml(parsed)}</div>`;
-    }
-     
-    if (typeof parsed === 'object' && parsed !== null) {
-      let html = '<div class="details-parsed">';
-      
-      for (const [key, value] of Object.entries(parsed)) {
-        const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        let formattedValue = value;
-         
-        if (typeof value === 'number') {
-          if (key.includes('amount') || key.includes('coins') || key.includes('score')) {
-            formattedValue = new Decimal(value).toFixed(9);
-          }
-        }
-         
-        if (typeof value === 'boolean') {
-          formattedValue = value ? '✓ Yes' : '✗ No';
-        }
-        
-        html += `
-          <div class="detail-row">
-            <span class="detail-label">${formattedKey}:</span>
-            <span class="detail-value">${escapeHtml(String(formattedValue))}</span>
-          </div>
-        `;
-      }
-      
-      html += '</div>';
-      return html;
-    }
+    const hasFirst = user.first_name && user.first_name.trim().length > 0;
+    const hasLast = user.last_name && user.last_name.trim().length > 0;
+    const displayName = hasFirst
+        ? `${user.first_name}${hasLast ? ' ' + user.last_name : ''}`
+        : (user.username || 'Anonymous');
     
-    return `<div class="details-parsed">${escapeHtml(String(parsed))}</div>`;
-  } catch (e) {
- 
-    return `<div class="details-parsed">${escapeHtml(details)}</div>`;
-  }
+    const username = user.username ? `@${user.username}` : '';
+    const userId = user.user_id ? String(user.user_id).substring(0, 8) + '...' : '';
+
+    return `
+        <div class="user-info-compact">
+            <div class="user-name">${escapeHtml(displayName)}</div>
+            ${username ? `<div class="user-username">${escapeHtml(username)}</div>` : ''}
+            ${userId ? `<div class="user-id">ID: ${userId}</div>` : ''}
+        </div>
+    `;
 }
 
 function escapeHtml(text) {
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function renderRecentActivity(logs) {
     const tbody = document.getElementById('recent-activity-tbody');
     if (!tbody) return;
 
-    if (!logs.length) {
+    if (!logs || logs.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
         return;
     }
 
     tbody.innerHTML = logs.slice(0, 10).map(log => {
-        const action = actionTypeMap[log.action] || { name: log.action, color: 'info', icon: '📝' };
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
         return `
             <tr>
-                <td class="timestamp" title="${formatDateTime(log.time)}">
-                    ${formatTimeAgo(log.time)}
+                <td class="timestamp" title="${formatDateTime(log.created_at || log.time)}">
+                    ${formatTimeAgo(log.created_at || log.time)}
                 </td>
                 <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
                 <td>
                     <div class="user-cell">
                         <div class="user-avatar">
-                            ${log.actor?.charAt(0)?.toUpperCase() || '?'}
+                            ${(log.username || '?').charAt(0).toUpperCase()}
                         </div>
                         <div class="user-details">
-                            <div class="user-name">${log.actor || 'System'}</div>
-                            <div class="user-username">${log.source || 'System'}</div>
+                            <div class="user-name">${log.username || 'System'}</div>
+                            <div class="user-username">${log.user_id || 'System'}</div>
                         </div>
                     </div>
                 </td>
                 <td class="details-text">${log.details || ''}</td>
-                <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}">${log.source}</span></td>
+                <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}">${log.source || 'USER'}</span></td>
             </tr>
         `;
     }).join('');
@@ -648,12 +605,9 @@ function renderUsersTable() {
             <div class="user-cell">
                 <div class="user-avatar">
                     ${avatarUrl ? 
-                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
-                        ''
+                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${(user.username || '?').charAt(0).toUpperCase()}</div>';">` : 
+                        `<div class="avatar-fallback">${(user.username || '?').charAt(0).toUpperCase()}</div>`
                     }
-                    <div class="avatar-fallback" style="${avatarUrl ? 'display: none;' : ''}">
-                        ${user.first_name?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
                 </div>
                 <div class="user-details">
                     <div class="user-name">
@@ -719,12 +673,9 @@ async function editUser(userId) {
             <div class="user-cell mb-3">
                 <div class="user-avatar">
                     ${avatarUrl ? 
-                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.querySelector('.avatar-fallback').style.display='flex';">` : 
-                        ''
+                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${(user.username || '?').charAt(0).toUpperCase()}</div>';">` : 
+                        `<div class="avatar-fallback">${(user.username || '?').charAt(0).toUpperCase()}</div>`
                     }
-                    <div class="avatar-fallback" style="${avatarUrl ? 'display: none;' : ''}">
-                        ${user.first_name?.charAt(0)?.toUpperCase() || user.username?.charAt(0)?.toUpperCase() || '?'}
-                    </div>
                 </div>
                 <div class="user-details">
                     <div class="user-name">
@@ -1107,53 +1058,52 @@ async function loadTransactions(page = 1) {
     }
 }
 
-
 function renderTransactionsTable() {
-  const tbody = document.getElementById('transactions-tbody');
-  if (!tbody) return;
+    const tbody = document.getElementById('transactions-tbody');
+    if (!tbody) return;
 
-  if (transactions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
-    return;
-  }
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
+        return;
+    }
 
-  tbody.innerHTML = transactions.map(tx => {
-    const senderInfo = formatUserInfo({
-      first_name: tx.sender_name,
-      username: tx.sender_username,
-      user_id: tx.sender_id
-    });
+    tbody.innerHTML = transactions.map(tx => {
+        const senderInfo = formatUserInfo({
+            first_name: tx.sender_name,
+            username: tx.sender_username,
+            user_id: tx.sender_id
+        });
 
-    const receiverInfo = formatUserInfo({
-      first_name: tx.receiver_name,
-      username: tx.receiver_username,
-      user_id: tx.receiver_id
-    });
+        const receiverInfo = formatUserInfo({
+            first_name: tx.receiver_name,
+            username: tx.receiver_username,
+            user_id: tx.receiver_id
+        });
 
-    return `
-    <tr>
-      <td>
-        <div class="transaction-flow-compact">
-          <div class="flow-user-compact">
-            <strong>From:</strong> ${senderInfo}
-          </div>
-          <div class="flow-arrow">→</div>
-          <div class="flow-user-compact">
-            <strong>To:</strong> ${receiverInfo}
-          </div>
-        </div>
-      </td>
-      <td>
-        <span class="flow-amount">
-          <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
-        </span>
-      </td>
-      <td class="timestamp" title="${formatDateTime(tx.created_at)}">
-        ${formatTimeAgo(tx.created_at)}
-      </td>
-    </tr>
-    `;
-  }).join('');
+        return `
+        <tr>
+            <td>
+                <div class="transaction-flow-compact">
+                    <div class="flow-user-compact">
+                        <strong>From:</strong> ${senderInfo}
+                    </div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-user-compact">
+                        <strong>To:</strong> ${receiverInfo}
+                    </div>
+                </div>
+            </td>
+            <td>
+                <span class="flow-amount">
+                    <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
+                </span>
+            </td>
+            <td class="timestamp" title="${formatDateTime(tx.created_at)}">
+                ${formatTimeAgo(tx.created_at)}
+            </td>
+        </tr>
+        `;
+    }).join('');
 }
 
 async function loadUserLogs(page = 1) {
@@ -1173,14 +1123,29 @@ async function loadUserLogs(page = 1) {
             }
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-        userLogs = data.logs || [];
+        if (!response.ok) {
+             
+            const fallbackResponse = await fetch(`${BACKEND_URL}/admin/user-logs?page=${page}&limit=${itemsPerPage}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-secret': ADMIN_SECRET
+                }
+            });
+            
+            if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
+            
+            const data = await fallbackResponse.json();
+            userLogs = data.logs || [];
+        } else {
+            const data = await response.json();
+            userLogs = data.logs || [];
+        }
+        
         currentPage.userLogs = page;
         
         renderUserLogsTable();
-        renderPagination('user-logs', data.totalCount || 0, page);
+        renderPagination('user-logs', userLogs.length, page);
 
     } catch (error) {
         console.error('Error loading user logs:', error);
@@ -1189,38 +1154,37 @@ async function loadUserLogs(page = 1) {
     }
 }
 
-
 function renderUserLogsTable() {
-  const tbody = document.getElementById('user-logs-tbody');
-  if (!tbody) return;
+    const tbody = document.getElementById('user-logs-tbody');
+    if (!tbody) return;
 
-  if (userLogs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
-    return;
-  }
+    if (userLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
+        return;
+    }
 
-  tbody.innerHTML = userLogs.map(log => {
-    const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
-    const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+    tbody.innerHTML = userLogs.map(log => {
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-    const userInfo = formatUserInfo({
-      first_name: log.first_name,
-      last_name: log.last_name,
-      username: log.username,
-      user_id: log.user_id
-    });
+        const userInfo = formatUserInfo({
+            first_name: log.first_name,
+            last_name: log.last_name,
+            username: log.username,
+            user_id: log.user_id
+        });
 
-    return `
-    <tr>
-      <td>${userInfo}</td>
-      <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-      <td class="col-wide">${parseDetailsEnhanced(log.details)}</td>
-      <td class="timestamp" title="${formatDateTime(log.created_at)}">
-        ${formatTimeAgo(log.created_at)}
-      </td>
-    </tr>
-    `;
-  }).join('');
+        return `
+        <tr>
+            <td>${userInfo}</td>
+            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+            <td class="col-wide">${parseDetails(log.details)}</td>
+            <td class="timestamp" title="${formatDateTime(log.created_at)}">
+                ${formatTimeAgo(log.created_at)}
+            </td>
+        </tr>
+        `;
+    }).join('');
 }
 
 async function loadAdminLogs(page = 1) {
@@ -1240,14 +1204,29 @@ async function loadAdminLogs(page = 1) {
             }
         });
 
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const data = await response.json();
-        adminLogs = data.logs || [];
+        if (!response.ok) {
+             
+            const fallbackResponse = await fetch(`${BACKEND_URL}/admin/admin-logs?page=${page}&limit=${itemsPerPage}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-secret': ADMIN_SECRET
+                }
+            });
+            
+            if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
+            
+            const data = await fallbackResponse.json();
+            adminLogs = data.logs || [];
+        } else {
+            const data = await response.json();
+            adminLogs = data.logs || [];
+        }
+        
         currentPage.adminLogs = page;
         
         renderAdminLogsTable();
-        renderPagination('admin-logs', data.totalCount || 0, page);
+        renderPagination('admin-logs', adminLogs.length, page);
 
     } catch (error) {
         console.error('Error loading admin logs:', error);
@@ -1256,46 +1235,44 @@ async function loadAdminLogs(page = 1) {
     }
 }
 
-
 function renderAdminLogsTable() {
-  const tbody = document.getElementById('admin-logs-tbody');
-  if (!tbody) return;
+    const tbody = document.getElementById('admin-logs-tbody');
+    if (!tbody) return;
 
-  if (adminLogs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
-    return;
-  }
+    if (adminLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
+        return;
+    }
 
-  tbody.innerHTML = adminLogs.map(log => {
-    const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
-    const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+    tbody.innerHTML = adminLogs.map(log => {
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-    const isCurrentUser = log.admin_id === currentUser?.id;
-    const adminDisplay = isCurrentUser ? 'You' : `Admin ${String(log.admin_id).substring(0, 8)}...`;
+        const isCurrentUser = log.admin_id === currentUser?.id;
+        const adminDisplay = isCurrentUser ? 'You' : `Admin ${String(log.admin_id).substring(0, 8)}...`;
 
-    const targetDisplay = log.target_user_id 
-      ? `User ${String(log.target_user_id).substring(0, 8)}...`
-      : 'System';
+        const targetDisplay = log.target_user_id 
+            ? `User ${String(log.target_user_id).substring(0, 8)}...`
+            : 'System';
 
-    return `
-    <tr>
-      <td>
-        <div class="user-info-compact">
-          <div class="user-name">${adminDisplay}</div>
-          <div class="user-id">ID: ${String(log.admin_id).substring(0, 8)}...</div>
-        </div>
-      </td>
-      <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-      <td>${targetDisplay}</td>
-      <td class="col-wide">${parseDetailsEnhanced(log.formatted_details || log.details)}</td>
-      <td class="timestamp" title="${formatDateTime(log.created_at)}">
-        ${formatTimeAgo(log.created_at)}
-      </td>
-    </tr>
-    `;
-  }).join('');
+        return `
+        <tr>
+            <td>
+                <div class="user-info-compact">
+                    <div class="user-name">${adminDisplay}</div>
+                    <div class="user-id">ID: ${String(log.admin_id).substring(0, 8)}...</div>
+                </div>
+            </td>
+            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+            <td>${targetDisplay}</td>
+            <td class="col-wide">${parseDetails(log.details)}</td>
+            <td class="timestamp" title="${formatDateTime(log.created_at)}">
+                ${formatTimeAgo(log.created_at)}
+            </td>
+        </tr>
+        `;
+    }).join('');
 }
-
 
 async function checkMaintenanceMode() {
     try {
@@ -1483,6 +1460,7 @@ function debounceSearch() {
 }
 
 function setupEventListeners() {
+     
     document.getElementById('login-button')?.addEventListener('click', login);
     
     document.getElementById('password')?.addEventListener('keypress', (e) => {
@@ -1491,44 +1469,54 @@ function setupEventListeners() {
         }
     });
     
+     
     document.getElementById('dashboard-nav')?.addEventListener('click', () => showSection('dashboard'));
     document.getElementById('users-nav')?.addEventListener('click', () => showSection('users'));
     document.getElementById('transactions-nav')?.addEventListener('click', () => showSection('transactions'));
     document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
     document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
     
+     
     document.getElementById('logout-button')?.addEventListener('click', logout);
     
+     
     document.getElementById('refresh-data-btn')?.addEventListener('click', refreshAllData);
     document.getElementById('dashboard-refresh')?.addEventListener('click', loadDashboardStats);
     document.getElementById('refresh-activity-btn')?.addEventListener('click', loadRecentActivity);
     
+     
     document.getElementById('user-search-btn')?.addEventListener('click', () => loadUsers(1));
     document.getElementById('user-search')?.addEventListener('input', debounceSearch);
     
+     
     document.getElementById('export-users-btn')?.addEventListener('click', exportUserData);
     document.getElementById('export-transactions-btn')?.addEventListener('click', exportTransactionData);
     
+     
     document.getElementById('add-coins-all-btn')?.addEventListener('click', showAddCoinsAllModal);
     document.getElementById('reset-all-scores-btn')?.addEventListener('click', resetAllScores);
     document.getElementById('clear-cache-btn')?.addEventListener('click', clearCache);
     document.getElementById('create-backup-btn')?.addEventListener('click', createBackup);
     
+     
     document.getElementById('broadcast-btn')?.addEventListener('click', showBroadcastModal);
     document.getElementById('send-broadcast-btn')?.addEventListener('click', sendBroadcast);
     document.getElementById('cancel-broadcast-btn')?.addEventListener('click', () => closeModal('broadcast-modal'));
     
+     
     document.getElementById('maintenance-toggle-btn')?.addEventListener('click', toggleMaintenanceMode);
     document.getElementById('enable-maintenance-btn')?.addEventListener('click', enableMaintenanceMode);
     document.getElementById('disable-maintenance-btn')?.addEventListener('click', disableMaintenanceMode);
     document.getElementById('cancel-maintenance-btn')?.addEventListener('click', () => closeModal('maintenance-modal'));
     
+     
     document.getElementById('close-edit-modal')?.addEventListener('click', () => closeModal('edit-user-modal'));
     document.getElementById('close-add-coins-modal')?.addEventListener('click', () => closeModal('add-coins-modal'));
     document.getElementById('close-add-coins-all-modal')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
     document.getElementById('close-broadcast-modal')?.addEventListener('click', () => closeModal('broadcast-modal'));
     document.getElementById('close-maintenance-modal')?.addEventListener('click', () => closeModal('maintenance-modal'));
     
+     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('active');
@@ -1536,6 +1524,7 @@ function setupEventListeners() {
         }
     });
     
+     
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal.active').forEach(modal => {
@@ -1545,6 +1534,7 @@ function setupEventListeners() {
         }
     });
     
+     
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
@@ -1552,6 +1542,7 @@ function setupEventListeners() {
         }
     });
     
+     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('sortable')) {
             const field = e.target.dataset.sort;
@@ -1582,12 +1573,14 @@ function setupEventListeners() {
             }
         }
         
+         
         if (e.target.closest('.edit-user-btn')) {
             const userId = e.target.closest('.edit-user-btn').dataset.userId;
             editUser(userId);
         }
     });
     
+     
     document.addEventListener('click', (e) => {
         if (e.target.id === 'add-coins-btn') {
             showAddCoinsModal();
@@ -1610,12 +1603,15 @@ function setupEventListeners() {
         }
     });
     
+     
     document.getElementById('confirm-add-coins')?.addEventListener('click', addCoinsToUser);
     document.getElementById('cancel-add-coins')?.addEventListener('click', () => closeModal('add-coins-modal'));
     
+     
     document.getElementById('confirm-add-coins-all')?.addEventListener('click', addCoinsToAllUsers);
     document.getElementById('cancel-add-coins-all')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
     
+     
     document.getElementById('add-coins-all-amount')?.addEventListener('input', updateCoinsCalculation);
 }
 
@@ -1754,11 +1750,13 @@ async function sendBroadcast() {
     }
 }
 
+ 
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin panel loaded');
     initAdminPanel();
 });
 
+ 
 window.addEventListener('error', function(event) {
     console.error('Global error:', event.error);
     showNotification('An unexpected error occurred', 'error');
@@ -1769,8 +1767,12 @@ window.addEventListener('unhandledrejection', function(event) {
     showNotification('An unexpected error occurred', 'error');
 });
 
+ 
 window.loadUsers = loadUsers;
 window.loadUserLogs = loadUserLogs;
 window.loadAdminLogs = loadAdminLogs;
 window.loadTransactions = loadTransactions;
 window.refreshAllData = refreshAllData;
+window.editUser = editUser;
+window.saveUserChanges = saveUserChanges;
+window.closeModal = closeModal;
