@@ -11,9 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/decimal.js@10.4.3/decimal.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-         
         :root {
-             
             --primary: #7d3c98;
             --primary-dark: #5a2a70;
             --primary-light: #9b59b6;
@@ -43,7 +41,6 @@
             --info-light: #48d2b7;
             --info-glow: rgba(26, 188, 156, 0.2);
             
-             
             --dark: #0a0a0f;
             --darker: #07070c;
             --surface: #1a1a24;
@@ -52,12 +49,10 @@
             --border: #404053;
             --border-light: #585870;
             
-             
             --text-primary: #ffffff;
             --text-secondary: #d0d0e0;
             --text-muted: #a0a0b0;
             
-             
             --radius: 8px;
             --radius-sm: 6px;
             --radius-lg: 12px;
@@ -65,7 +60,6 @@
             --shadow-sm: 0 3px 10px rgba(0, 0, 0, 0.2);
             --shadow-lg: 0 15px 30px -10px rgba(0, 0, 0, 0.5);
             
-             
             --spacing-xs: 0.25rem;
             --spacing-sm: 0.5rem;
             --spacing-md: 0.75rem;
@@ -76,7 +70,6 @@
             --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         }
 
-         
         * {
             margin: 0;
             padding: 0;
@@ -95,7 +88,6 @@
             -moz-osx-font-smoothing: grayscale;
         }
 
-         
         h1, h2, h3, h4, h5, h6 {
             font-weight: 600;
             line-height: 1.2;
@@ -107,7 +99,6 @@
         .text-lg { font-size: 1.125rem; }
         .text-xl { font-size: 1.25rem; }
 
-         
         .loading {
             display: flex;
             justify-content: center;
@@ -131,7 +122,6 @@
             to { transform: rotate(360deg); }
         }
 
-         
         #login-section {
             display: flex;
             justify-content: center;
@@ -249,7 +239,6 @@
             margin-top: var(--spacing-lg);
         }
 
-         
         .btn {
             display: inline-flex;
             align-items: center;
@@ -373,13 +362,11 @@
             font-size: 1rem;
         }
 
-         
         #admin-panel {
             display: none;
             min-height: 100vh;
         }
 
-         
         .admin-header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -528,14 +515,12 @@
             letter-spacing: 0.5px;
         }
 
-         
         .admin-main {
             display: grid;
             grid-template-columns: 240px 1fr;
             min-height: calc(100vh - 60px);
         }
 
-         
         .admin-sidebar {
             background: var(--surface);
             border-right: 1px solid var(--border);
@@ -673,14 +658,12 @@
             font-family: 'SF Mono', Monaco, monospace;
         }
 
-         
         .admin-content {
             padding: var(--spacing-lg);
             overflow-y: auto;
             background: var(--darker);
         }
 
-         
         .content-header {
             display: flex;
             justify-content: space-between;
@@ -751,7 +734,6 @@
             box-shadow: 0 0 0 3px var(--primary-glow);
         }
 
-         
         .section {
             display: none;
             animation: fadeIn 0.3s ease;
@@ -766,7 +748,6 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-         
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -843,7 +824,6 @@
             color: var(--text-secondary);
         }
 
-         
         .content-card {
             background: var(--surface);
             border: 1px solid var(--border);
@@ -871,7 +851,6 @@
             gap: var(--spacing-sm);
         }
 
-         
         .table-responsive {
             overflow-x: auto;
             border-radius: var(--radius-sm);
@@ -925,7 +904,6 @@
             background: var(--surface-hover);
         }
 
-         
         .user-cell {
             display: flex;
             align-items: center;
@@ -973,7 +951,6 @@
             display: inline-block;
         }
 
-         
         .action-badge {
             display: inline-flex;
             align-items: center;
@@ -1017,7 +994,6 @@
             border: 1px solid rgba(125, 60, 152, 0.3);
         }
 
-         
         .timestamp {
             font-family: 'SF Mono', Monaco, monospace;
             font-size: 0.8rem;
@@ -1048,7 +1024,6 @@
             box-shadow: var(--shadow);
         }
 
-         
         .json-display {
             background: var(--darker);
             border: 1px solid var(--border);
@@ -1082,7 +1057,6 @@
             color: var(--danger);
         }
 
-         
         .transaction-flow {
             display: flex;
             align-items: center;
@@ -1114,7 +1088,6 @@
             gap: 4px;
         }
 
-         
         .pagination {
             display: flex;
             justify-content: center;
@@ -1154,7 +1127,6 @@
             border-color: var(--primary);
         }
 
-         
         .modal {
             display: none;
             position: fixed;
@@ -1273,7 +1245,6 @@
             border-radius: 0 0 var(--radius-lg) var(--radius-lg);
         }
 
-         
         .grid-2 {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1287,7 +1258,6 @@
             gap: var(--spacing-sm);
         }
 
-         
         .notification {
             position: fixed;
             top: var(--spacing-lg);
@@ -1338,7 +1308,6 @@
             backdrop-filter: blur(10px);
         }
 
-         
         ::-webkit-scrollbar {
             width: 8px;
             height: 8px;
@@ -1359,7 +1328,6 @@
             background: var(--border);
         }
 
-         
         @media (max-width: 1200px) {
             .admin-main {
                 grid-template-columns: 1fr;
@@ -1451,7 +1419,6 @@
             }
         }
 
-         
         .text-center { text-align: center; }
         .text-right { text-align: right; }
         .text-left { text-align: left; }
@@ -1479,7 +1446,6 @@
     </style>
 </head>
 <body>
-     
     <section id="login-section">
         <div class="login-card">
             <div class="login-header">
@@ -1502,7 +1468,7 @@
                     </div>
                 </div>
                 <div id="login-error" class="error-message"></div>
-                <button class="btn btn-primary btn-block" onclick="login()">
+                <button class="btn btn-primary btn-block" id="login-button">
                     <i class="btn-icon fas fa-sign-in-alt"></i>
                     Sign In
                 </button>
@@ -1510,7 +1476,6 @@
         </div>
     </section>
 
-     
     <section id="admin-panel">
         <header class="admin-header">
             <div class="header-left">
@@ -1527,23 +1492,23 @@
             
             <div class="header-center">
                 <div class="admin-nav">
-                    <button class="nav-btn active" onclick="showSection('dashboard')">
+                    <button class="nav-btn active" id="dashboard-nav">
                         <i class="nav-icon fas fa-chart-bar"></i>
                         <span class="nav-text">Dashboard</span>
                     </button>
-                    <button class="nav-btn" onclick="showSection('users')">
+                    <button class="nav-btn" id="users-nav">
                         <i class="nav-icon fas fa-users"></i>
                         <span class="nav-text">Users</span>
                     </button>
-                    <button class="nav-btn" onclick="showSection('transactions')">
+                    <button class="nav-btn" id="transactions-nav">
                         <i class="nav-icon fas fa-exchange-alt"></i>
                         <span class="nav-text">Transactions</span>
                     </button>
-                    <button class="nav-btn" onclick="showSection('user-logs')">
+                    <button class="nav-btn" id="user-logs-nav">
                         <i class="nav-icon fas fa-history"></i>
                         <span class="nav-text">User Logs</span>
                     </button>
-                    <button class="nav-btn" onclick="showSection('admin-logs')">
+                    <button class="nav-btn" id="admin-logs-nav">
                         <i class="nav-icon fas fa-tools"></i>
                         <span class="nav-text">Admin Logs</span>
                     </button>
@@ -1560,7 +1525,7 @@
                         <span class="user-role">Super Admin</span>
                     </div>
                 </div>
-                <button class="btn btn-danger" onclick="logout()">
+                <button class="btn btn-danger" id="logout-button">
                     <i class="btn-icon fas fa-sign-out-alt"></i>
                     Logout
                 </button>
@@ -1572,15 +1537,15 @@
                 <div class="sidebar-section">
                     <h3 class="sidebar-title">Quick Actions</h3>
                     <div class="quick-actions">
-                        <button class="sidebar-btn" onclick="refreshAllData()">
+                        <button class="sidebar-btn" id="refresh-data-btn">
                             <i class="sidebar-icon fas fa-sync-alt"></i>
                             Refresh Data
                         </button>
-                        <button class="sidebar-btn" onclick="exportUserData()">
+                        <button class="sidebar-btn" id="export-users-btn">
                             <i class="sidebar-icon fas fa-download"></i>
                             Export Users
                         </button>
-                        <button class="sidebar-btn" onclick="showBroadcastModal()">
+                        <button class="sidebar-btn" id="broadcast-btn">
                             <i class="sidebar-icon fas fa-bullhorn"></i>
                             Send Broadcast
                         </button>
@@ -1625,12 +1590,11 @@
             </aside>
 
             <div class="admin-content">
-                 
                 <div id="dashboard" class="section active">
                     <div class="content-header">
                         <h1 class="page-title">Dashboard Overview</h1>
                         <div class="header-actions">
-                            <button class="btn btn-outline btn-sm" onclick="refreshAllData()">
+                            <button class="btn btn-outline btn-sm" id="dashboard-refresh">
                                 <i class="fas fa-sync-alt"></i>
                                 Refresh
                             </button>
@@ -1686,7 +1650,7 @@
                     <div class="content-card">
                         <div class="card-header">
                             <h2 class="card-title"><i class="fas fa-history"></i> Recent Activity</h2>
-                            <button class="btn btn-outline btn-sm" onclick="loadRecentActivity()">
+                            <button class="btn btn-outline btn-sm" id="refresh-activity-btn">
                                 <i class="fas fa-sync-alt"></i>
                                 Refresh
                             </button>
@@ -1710,17 +1674,15 @@
                     </div>
                 </div>
 
-                 
                 <div id="users" class="section">
                     <div class="content-header">
                         <h1 class="page-title">User Management</h1>
                         <div class="search-bar">
                             <div class="search-input">
                                 <i class="search-icon fas fa-search"></i>
-                                <input type="text" id="user-search" placeholder="Search users by ID, username..." 
-                                       oninput="debounceSearch()">
+                                <input type="text" id="user-search" placeholder="Search users by ID, username...">
                             </div>
-                            <button class="btn btn-primary" onclick="loadUsers(1)">
+                            <button class="btn btn-primary" id="user-search-btn">
                                 <i class="fas fa-search"></i>
                                 Search
                             </button>
@@ -1732,11 +1694,11 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 25%;" onclick="sortUsers('user_id')">User</th>
-                                        <th style="width: 15%;" onclick="sortUsers('score')">Coins</th>
-                                        <th style="width: 15%;" onclick="sortUsers('click_value')">Per Click</th>
-                                        <th style="width: 15%;" onclick="sortUsers('auto_click_rate')">Per Second</th>
-                                        <th style="width: 15%;" onclick="sortUsers('last_updated')">Last Active</th>
+                                        <th style="width: 25%;" class="sortable" data-sort="user_id">User</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="score">Coins</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="click_value">Per Click</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="auto_click_rate">Per Second</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="last_updated">Last Active</th>
                                         <th style="width: 10%;">Status</th>
                                         <th style="width: 5%;">Actions</th>
                                     </tr>
@@ -1751,12 +1713,11 @@
                     </div>
                 </div>
 
-                 
                 <div id="transactions" class="section">
                     <div class="content-header">
                         <h1 class="page-title">Transaction History</h1>
                         <div class="header-actions">
-                            <button class="btn btn-info btn-sm" onclick="exportTransactionData()">
+                            <button class="btn btn-info btn-sm" id="export-transactions-btn">
                                 <i class="fas fa-download"></i>
                                 Export
                             </button>
@@ -1769,8 +1730,8 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 60%;">Transaction</th>
-                                        <th style="width: 20%;" onclick="sortTransactions('amount')">Amount</th>
-                                        <th style="width: 20%;" onclick="sortTransactions('created_at')">Date & Time</th>
+                                        <th style="width: 20%;" class="sortable" data-sort="amount">Amount</th>
+                                        <th style="width: 20%;" class="sortable" data-sort="created_at">Date & Time</th>
                                     </tr>
                                 </thead>
                                 <tbody id="transactions-tbody">
@@ -1783,7 +1744,6 @@
                     </div>
                 </div>
 
-                 
                 <div id="user-logs" class="section">
                     <div class="content-header">
                         <h1 class="page-title">User Activity Logs</h1>
@@ -1794,10 +1754,10 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 25%;" onclick="sortUserLogs('user_id')">User</th>
-                                        <th style="width: 20%;" onclick="sortUserLogs('action_type')">Action</th>
+                                        <th style="width: 25%;" class="sortable" data-sort="user_id">User</th>
+                                        <th style="width: 20%;" class="sortable" data-sort="action_type">Action</th>
                                         <th style="width: 40%;">Details</th>
-                                        <th style="width: 15%;" onclick="sortUserLogs('created_at')">Time</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="created_at">Time</th>
                                     </tr>
                                 </thead>
                                 <tbody id="user-logs-tbody">
@@ -1810,7 +1770,6 @@
                     </div>
                 </div>
 
-                 
                 <div id="admin-logs" class="section">
                     <div class="content-header">
                         <h1 class="page-title">Admin Activity Logs</h1>
@@ -1821,11 +1780,11 @@
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 20%;" onclick="sortAdminLogs('admin_id')">Admin</th>
-                                        <th style="width: 15%;" onclick="sortAdminLogs('action_type')">Action</th>
+                                        <th style="width: 20%;" class="sortable" data-sort="admin_id">Admin</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="action_type">Action</th>
                                         <th style="width: 15%;">Target</th>
                                         <th style="width: 35%;">Details</th>
-                                        <th style="width: 15%;" onclick="sortAdminLogs('created_at')">Time</th>
+                                        <th style="width: 15%;" class="sortable" data-sort="created_at">Time</th>
                                     </tr>
                                 </thead>
                                 <tbody id="admin-logs-tbody">
@@ -1841,12 +1800,11 @@
         </main>
     </section>
 
-     
     <div id="edit-user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title"><i class="fas fa-user-edit"></i> Edit User</h3>
-                <button class="modal-close" onclick="closeModal('edit-user-modal')">&times;</button>
+                <button class="modal-close" id="close-edit-modal">&times;</button>
             </div>
             <div id="edit-user-form"></div>
         </div>
@@ -1856,7 +1814,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title"><i class="fas fa-plus-circle"></i> Add Coins</h3>
-                <button class="modal-close" onclick="closeModal('add-coins-modal')">&times;</button>
+                <button class="modal-close" id="close-add-coins-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1865,11 +1823,11 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-success" onclick="addCoinsToUser()">
+                <button class="btn btn-success" id="confirm-add-coins">
                     <i class="fas fa-check"></i>
                     Add Coins
                 </button>
-                <button class="btn btn-outline" onclick="closeModal('add-coins-modal')">
+                <button class="btn btn-outline" id="cancel-add-coins">
                     <i class="fas fa-times"></i>
                     Cancel
                 </button>
@@ -1881,7 +1839,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3 class="modal-title"><i class="fas fa-bullhorn"></i> Broadcast Message</h3>
-                <button class="modal-close" onclick="closeModal('broadcast-modal')">&times;</button>
+                <button class="modal-close" id="close-broadcast-modal">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="form-group">
@@ -1899,17 +1857,18 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="sendBroadcast()">
+                <button class="btn btn-primary" id="send-broadcast-btn">
                     <i class="fas fa-paper-plane"></i>
                     Send Broadcast
                 </button>
-                <button class="btn btn-outline" onclick="closeModal('broadcast-modal')">
+                <button class="btn btn-outline" id="cancel-broadcast-btn">
                     <i class="fas fa-times"></i>
                     Cancel
                 </button>
             </div>
         </div>
     </div>
-    <script src="js/admin.js"></script>
+
+    <script src="admin.js" defer></script>
 </body>
 </html>

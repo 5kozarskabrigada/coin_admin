@@ -1,1309 +1,1374 @@
-         
-        const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
-        const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
-        const ADMIN_SECRET = 'sisi-clicker-admin-secret-2024';
+// Constants
+const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
+const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
+const ADMIN_SECRET = 'sisi-clicker-admin-secret-2024';
 
-         
-        let supabaseClient = null;
-        let currentUser = null;
-        let currentSection = 'dashboard';
-        let users = [];
-        let userLogs = [];
-        let adminLogs = [];
-        let transactions = [];
+// Global variables
+let supabaseClient = null;
+let currentUser = null;
+let currentSection = 'dashboard';
+let users = [];
+let userLogs = [];
+let adminLogs = [];
+let transactions = [];
 
-        const itemsPerPage = 15;
-        let currentPage = {
-            users: 1,
-            userLogs: 1,
-            adminLogs: 1,
-            transactions: 1
-        };
+const itemsPerPage = 15;
+let currentPage = {
+    users: 1,
+    userLogs: 1,
+    adminLogs: 1,
+    transactions: 1
+};
 
-        let sortConfig = {
-            users: { field: 'user_id', direction: 'asc' },
-            userLogs: { field: 'created_at', direction: 'desc' },
-            adminLogs: { field: 'created_at', direction: 'desc' },
-            transactions: { field: 'created_at', direction: 'desc' }
-        };
+let sortConfig = {
+    users: { field: 'user_id', direction: 'asc' },
+    userLogs: { field: 'created_at', direction: 'desc' },
+    adminLogs: { field: 'created_at', direction: 'desc' },
+    transactions: { field: 'created_at', direction: 'desc' }
+};
 
-        let currentEditingUserId = null;
-        let debounceTimer = null;
+let currentEditingUserId = null;
+let debounceTimer = null;
 
-         
-        const actionTypeMap = {
-             
-            'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: '🏆' },
-            'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: '⚙️' },
-            'coin_transfer': { name: 'Sent Coins', color: 'info', icon: '💰' },
-            'coin_received': { name: 'Received Coins', color: 'success', icon: '💸' },
-            'login': { name: 'Logged In', color: 'info', icon: '🔑' },
-            
-             
-            'ban_user': { name: 'User Banned', color: 'danger', icon: '🚫' },
-            'unban_user': { name: 'User Unbanned', color: 'success', icon: '✅' },
-            'add_coins': { name: 'Coins Added', color: 'warning', icon: '➕' },
-            'reset_score': { name: 'Score Reset', color: 'danger', icon: '🔄' },
-            'delete_user': { name: 'User Deleted', color: 'danger', icon: '🗑️' },
-            'admin_login': { name: 'Admin Login', color: 'info', icon: '👑' },
-            'send_broadcast': { name: 'Broadcast Sent', color: 'info', icon: '📢' },
-            'create_backup': { name: 'Backup Created', color: 'info', icon: '💾' },
-            'enable_maintenance': { name: 'Maintenance Enabled', color: 'warning', icon: '🔧' },
-            'disable_maintenance': { name: 'Maintenance Disabled', color: 'success', icon: '✅' },
-            'make_admin': { name: 'Admin Promoted', color: 'primary', icon: '👑' },
-            'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: '👤' },
-            'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: '🔄' },
-            'update_user': { name: 'User Updated', color: 'info', icon: '✏️' }
-        };
+// Action type mapping for display
+const actionTypeMap = {
+    // User actions
+    'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: '🏆' },
+    'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: '⚙️' },
+    'coin_transfer': { name: 'Sent Coins', color: 'info', icon: '💰' },
+    'coin_received': { name: 'Received Coins', color: 'success', icon: '💸' },
+    'login': { name: 'Logged In', color: 'info', icon: '🔑' },
+    
+    // Admin actions
+    'ban_user': { name: 'User Banned', color: 'danger', icon: '🚫' },
+    'unban_user': { name: 'User Unbanned', color: 'success', icon: '✅' },
+    'add_coins': { name: 'Coins Added', color: 'warning', icon: '➕' },
+    'reset_score': { name: 'Score Reset', color: 'danger', icon: '🔄' },
+    'delete_user': { name: 'User Deleted', color: 'danger', icon: '🗑️' },
+    'admin_login': { name: 'Admin Login', color: 'info', icon: '👑' },
+    'send_broadcast': { name: 'Broadcast Sent', color: 'info', icon: '📢' },
+    'create_backup': { name: 'Backup Created', color: 'info', icon: '💾' },
+    'enable_maintenance': { name: 'Maintenance Enabled', color: 'warning', icon: '🔧' },
+    'disable_maintenance': { name: 'Maintenance Disabled', color: 'success', icon: '✅' },
+    'make_admin': { name: 'Admin Promoted', color: 'primary', icon: '👑' },
+    'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: '👤' },
+    'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: '🔄' },
+    'update_user': { name: 'User Updated', color: 'info', icon: '✏️' }
+};
 
-         
-        function formatTimeAgo(dateString) {
-            if (!dateString) return 'Never';
-            
-            const date = new Date(dateString);
-            const now = new Date();
-            const diffMs = now - date;
-            const diffSec = Math.floor(diffMs / 1000);
-            const diffMin = Math.floor(diffSec / 60);
-            const diffHour = Math.floor(diffMin / 60);
-            const diffDay = Math.floor(diffHour / 24);
-            
-            if (diffSec < 60) {
-                return `${diffSec}s ago`;
-            } else if (diffMin < 60) {
-                return `${diffMin}m ago`;
-            } else if (diffHour < 24) {
-                return `${diffHour}h ago`;
-            } else if (diffDay < 7) {
-                return `${diffDay}d ago`;
-            } else {
-                return date.toLocaleDateString();
-            }
-        }
+// Utility functions
+function formatTimeAgo(dateString) {
+    if (!dateString) return 'Never';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHour = Math.floor(diffMin / 60);
+    const diffDay = Math.floor(diffHour / 24);
+    
+    if (diffSec < 60) {
+        return `${diffSec}s ago`;
+    } else if (diffMin < 60) {
+        return `${diffMin}m ago`;
+    } else if (diffHour < 24) {
+        return `${diffHour}h ago`;
+    } else if (diffDay < 7) {
+        return `${diffDay}d ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
 
-        function formatDateTime(dateString) {
-            if (!dateString) return 'N/A';
-            return new Date(dateString).toLocaleString();
-        }
+function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString();
+}
 
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
-            `;
-            
-            document.body.appendChild(notification);
-            
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.style.animation = 'slideInRight 0.3s ease reverse';
             setTimeout(() => {
                 if (notification.parentNode) {
-                    notification.style.animation = 'slideInRight 0.3s ease reverse';
-                    setTimeout(() => {
-                        if (notification.parentNode) {
-                            document.body.removeChild(notification);
-                        }
-                    }, 300);
+                    document.body.removeChild(notification);
                 }
-            }, 3000);
+            }, 300);
+        }
+    }, 3000);
+}
+
+// Authentication functions
+async function initAdminPanel() {
+    try {
+        console.log('🚀 Initializing admin panel...');
+        
+        // Initialize Supabase client
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Check authentication
+        await checkAuth();
+        
+        // Setup event listeners
+        setupEventListeners();
+        
+        // Load initial data if logged in
+        if (currentUser) {
+            loadDashboardStats();
+            loadUsers();
+        }
+        
+    } catch (error) {
+        console.error('❌ Failed to initialize admin panel:', error);
+        showNotification('Failed to initialize admin panel. Please refresh the page.', 'error');
+    }
+}
+
+async function checkAuth() {
+    if (!supabaseClient) return;
+
+    try {
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+
+        if (error) {
+            console.error('Auth session error:', error);
+            return;
         }
 
-         
-        async function initAdminPanel() {
-            try {
-                console.log('🚀 Initializing admin panel...');
-                
-                 
-                supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-                
-                 
-                await checkAuth();
-                
-                 
-                setupEventListeners();
-                
-                 
-                if (currentUser) {
-                    loadDashboardStats();
-                    loadUsers();
-                }
-                
-            } catch (error) {
-                console.error('❌ Failed to initialize admin panel:', error);
-                showNotification('Failed to initialize admin panel. Please refresh the page.', 'error');
-            }
-        }
+        if (session && session.user) {
+            // Check if user is an admin
+            const { data: adminUser, error: adminError } = await supabaseClient
+                .from('admin_users')
+                .select('*')
+                .eq('user_id', session.user.id)
+                .eq('is_active', true)
+                .single();
 
-         
-        async function checkAuth() {
-            if (!supabaseClient) return;
-
-            try {
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
-
-                if (error) {
-                    console.error('Auth session error:', error);
-                    return;
-                }
-
-                if (session && session.user) {
-                     
-                    const { data: adminUser, error: adminError } = await supabaseClient
-                        .from('admin_users')
-                        .select('*')
-                        .eq('user_id', session.user.id)
-                        .eq('is_active', true)
-                        .single();
-
-                    if (adminError || !adminUser) {
-                        console.log('User is not an admin');
-                        await logout();
-                        return;
-                    }
-
-                    currentUser = { ...session.user, ...adminUser };
-                    document.getElementById('admin-name').textContent = 
-                        currentUser.email || currentUser.user_id;
-                    showAdminPanel();
-                }
-            } catch (error) {
-                console.error('Auth check failed:', error);
-            }
-        }
-
-        async function login() {
-            if (!supabaseClient) {
-                showNotification('System not ready. Please refresh.', 'error');
+            if (adminError || !adminUser) {
+                console.log('User is not an admin');
+                await logout();
                 return;
             }
 
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorElement = document.getElementById('login-error');
+            currentUser = { ...session.user, ...adminUser };
+            document.getElementById('admin-name').textContent = 
+                currentUser.email || currentUser.user_id;
+            showAdminPanel();
+        }
+    } catch (error) {
+        console.error('Auth check failed:', error);
+    }
+}
 
-            if (!email || !password) {
-                errorElement.textContent = 'Please enter both email and password';
-                errorElement.style.display = 'block';
-                return;
-            }
+async function login() {
+    if (!supabaseClient) {
+        showNotification('System not ready. Please refresh.', 'error');
+        return;
+    }
 
-            try {
-                errorElement.style.display = 'none';
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const errorElement = document.getElementById('login-error');
 
-                const { data, error } = await supabaseClient.auth.signInWithPassword({
-                    email: email.trim(),
-                    password: password
-                });
+    if (!email || !password) {
+        errorElement.textContent = 'Please enter both email and password';
+        errorElement.style.display = 'block';
+        return;
+    }
 
-                if (error) throw error;
+    try {
+        errorElement.style.display = 'none';
 
-                 
-                const { data: adminUser, error: adminError } = await supabaseClient
-                    .from('admin_users')
-                    .select('*')
-                    .eq('user_id', data.user.id)
-                    .eq('is_active', true)
-                    .single();
+        const { data, error } = await supabaseClient.auth.signInWithPassword({
+            email: email.trim(),
+            password: password
+        });
 
-                if (adminError || !adminUser) {
-                    throw new Error('Access denied. Not an admin or account inactive.');
-                }
+        if (error) throw error;
 
-                currentUser = { ...data.user, ...adminUser };
-                document.getElementById('admin-name').textContent = 
-                    currentUser.email || currentUser.user_id;
-                showAdminPanel();
-                showNotification('Login successful!', 'success');
+        // Check if user is an admin
+        const { data: adminUser, error: adminError } = await supabaseClient
+            .from('admin_users')
+            .select('*')
+            .eq('user_id', data.user.id)
+            .eq('is_active', true)
+            .single();
 
-                 
-                await logAdminAction('admin_login', null, 'Admin logged in');
-
-            } catch (error) {
-                console.error('Login error:', error);
-                errorElement.textContent = error.message;
-                errorElement.style.display = 'block';
-                showNotification('Login failed: ' + error.message, 'error');
-            }
+        if (adminError || !adminUser) {
+            throw new Error('Access denied. Not an admin or account inactive.');
         }
 
-        async function logout() {
-            try {
-                if (supabaseClient) {
-                    await supabaseClient.auth.signOut();
-                }
-                currentUser = null;
-                document.getElementById('login-section').style.display = 'flex';
-                document.getElementById('admin-panel').style.display = 'none';
-                showNotification('Logged out successfully', 'info');
-            } catch (error) {
-                console.error('Logout error:', error);
-                showNotification('Logout failed', 'error');
-            }
+        currentUser = { ...data.user, ...adminUser };
+        document.getElementById('admin-name').textContent = 
+            currentUser.email || currentUser.user_id;
+        showAdminPanel();
+        showNotification('Login successful!', 'success');
+
+        // Log the admin login
+        await logAdminAction('admin_login', null, 'Admin logged in');
+
+    } catch (error) {
+        console.error('Login error:', error);
+        errorElement.textContent = error.message;
+        errorElement.style.display = 'block';
+        showNotification('Login failed: ' + error.message, 'error');
+    }
+}
+
+async function logout() {
+    try {
+        if (supabaseClient) {
+            await supabaseClient.auth.signOut();
         }
+        currentUser = null;
+        document.getElementById('login-section').style.display = 'flex';
+        document.getElementById('admin-panel').style.display = 'none';
+        showNotification('Logged out successfully', 'info');
+    } catch (error) {
+        console.error('Logout error:', error);
+        showNotification('Logout failed', 'error');
+    }
+}
 
-        function showAdminPanel() {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('admin-panel').style.display = 'block';
-        }
+function showAdminPanel() {
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('admin-panel').style.display = 'block';
+}
 
-         
-        function showSection(sectionName) {
-             
-            document.querySelectorAll('.section').forEach(section => {
-                section.classList.remove('active');
-            });
+// Section management
+function showSection(sectionName) {
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(section => {
+        section.classList.remove('active');
+    });
 
-             
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+    // Remove active class from all nav buttons
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
 
-             
-            const sectionElement = document.getElementById(sectionName);
-            if (sectionElement) {
-                sectionElement.classList.add('active');
+    // Show the selected section
+    const sectionElement = document.getElementById(sectionName);
+    if (sectionElement) {
+        sectionElement.classList.add('active');
+    }
+
+    // Activate the corresponding nav button
+    document.getElementById(`${sectionName}-nav`).classList.add('active');
+
+    // Load data for the section
+    switch (sectionName) {
+        case 'dashboard':
+            loadDashboardStats();
+            break;
+        case 'users':
+            loadUsers();
+            break;
+        case 'user-logs':
+            loadUserLogs();
+            break;
+        case 'admin-logs':
+            loadAdminLogs();
+            break;
+        case 'transactions':
+            loadTransactions();
+            break;
+    }
+}
+
+// Dashboard functions
+async function loadDashboardStats() {
+    if (!currentUser) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/stats`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
             }
+        });
 
-             
-            document.querySelector(`[onclick="showSection('${sectionName}')"]`).classList.add('active');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-             
-            switch (sectionName) {
-                case 'dashboard':
-                    loadDashboardStats();
-                    break;
-                case 'users':
-                    loadUsers();
-                    break;
-                case 'user-logs':
-                    loadUserLogs();
-                    break;
-                case 'admin-logs':
-                    loadAdminLogs();
-                    break;
-                case 'transactions':
-                    loadTransactions();
-                    break;
+        const data = await response.json();
+
+        // Update dashboard stats
+        document.getElementById('total-users').textContent = data.totalUsers || 0;
+        document.getElementById('active-today').textContent = data.activeToday || 0;
+        document.getElementById('banned-users').textContent = data.bannedUsers || 0;
+        document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
+        document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
+
+        // Update sidebar stats
+        document.getElementById('sidebar-total-users').textContent = data.totalUsers || 0;
+        document.getElementById('sidebar-total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
+        document.getElementById('sidebar-active-today').textContent = data.activeToday || 0;
+
+        // Update API status
+        document.getElementById('api-status').textContent = 'Online';
+        document.getElementById('api-status-indicator').classList.add('online');
+
+        // Load recent activity
+        await loadRecentActivity();
+
+    } catch (error) {
+        console.error('Error loading dashboard stats:', error);
+        document.getElementById('api-status').textContent = 'Offline';
+        document.getElementById('api-status-indicator').classList.remove('online');
+        showNotification('Failed to load dashboard data', 'error');
+    }
+}
+
+async function loadRecentActivity() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/combined-activity`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
             }
-        }
+        });
 
-         
-        async function loadDashboardStats() {
-            if (!currentUser) return;
+        if (!response.ok) throw new Error('Failed to load recent activity');
 
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/stats`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
+        const data = await response.json();
+        renderRecentActivity(data.logs || []);
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    } catch (error) {
+        console.error('Error loading recent activity:', error);
+    }
+}
 
-                const data = await response.json();
+function renderRecentActivity(logs) {
+    const tbody = document.getElementById('recent-activity-tbody');
+    if (!tbody) return;
 
-                 
-                document.getElementById('total-users').textContent = data.totalUsers || 0;
-                document.getElementById('active-today').textContent = data.activeToday || 0;
-                document.getElementById('banned-users').textContent = data.bannedUsers || 0;
-                document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
-                document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
+    if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
+        return;
+    }
 
-                 
-                document.getElementById('sidebar-total-users').textContent = data.totalUsers || 0;
-                document.getElementById('sidebar-total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
-                document.getElementById('sidebar-active-today').textContent = data.activeToday || 0;
-
-                 
-                document.getElementById('api-status').textContent = 'Online';
-                document.getElementById('api-status-indicator').classList.add('online');
-
-                 
-                await loadRecentActivity();
-
-            } catch (error) {
-                console.error('Error loading dashboard stats:', error);
-                document.getElementById('api-status').textContent = 'Offline';
-                document.getElementById('api-status-indicator').classList.remove('online');
-                showNotification('Failed to load dashboard data', 'error');
-            }
-        }
-
-        async function loadRecentActivity() {
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/combined-activity`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to load recent activity');
-
-                const data = await response.json();
-                renderRecentActivity(data.logs || []);
-
-            } catch (error) {
-                console.error('Error loading recent activity:', error);
-            }
-        }
-
-        function renderRecentActivity(logs) {
-            const tbody = document.getElementById('recent-activity-tbody');
-            if (!tbody) return;
-
-            if (!logs.length) {
-                tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = logs.slice(0, 10).map(log => {
-                const action = actionTypeMap[log.action] || { name: log.action, color: 'info', icon: '📝' };
-                const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
-                
-                return `
-                    <tr>
-                        <td class="timestamp" title="${formatDateTime(log.time)}">
-                            ${formatTimeAgo(log.time)}
-                        </td>
-                        <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-                        <td>
-                            <div class="user-cell">
-                                <div class="user-avatar">
-                                    ${log.actor?.charAt(0)?.toUpperCase() || '?'}
-                                </div>
-                                <div class="user-details">
-                                    <div class="user-name">${log.actor || 'System'}</div>
-                                    <div class="user-username">${log.source || 'System'}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td>${log.details || ''}</td>
-                        <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}">${log.source}</span></td>
-                    </tr>
-                `;
-            }).join('');
-        }
-
-         
-        async function loadUsers(page = 1) {
-            if (!currentUser) return;
-            
-            const searchTerm = document.getElementById('user-search')?.value || '';
-            const tbody = document.getElementById('users-tbody');
-            
-            if (!tbody) return;
-            
-            tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading users...</td></tr>';
-
-            try {
-                const url = new URL(`${BACKEND_URL}/admin/users`);
-                url.searchParams.set('page', page);
-                url.searchParams.set('limit', itemsPerPage);
-                if (searchTerm) {
-                    url.searchParams.set('search', searchTerm);
-                }
-
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const data = await response.json();
-                users = data.users || [];
-                currentPage.users = page;
-                
-                renderUsersTable();
-                renderPagination('users', data.totalCount || 0, page);
-
-            } catch (error) {
-                console.error('Error loading users:', error);
-                tbody.innerHTML = `<tr><td colspan="7" class="error">Error: ${error.message}</td></tr>`;
-                showNotification('Failed to load users', 'error');
-            }
-        }
-
-        function renderUsersTable() {
-            const tbody = document.getElementById('users-tbody');
-            if (!tbody) return;
-
-            if (!users || users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = users.map(user => {
-                 
-                const userCell = `
+    tbody.innerHTML = logs.slice(0, 10).map(log => {
+        const action = actionTypeMap[log.action] || { name: log.action, color: 'info', icon: '📝' };
+        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+        
+        return `
+            <tr>
+                <td class="timestamp" title="${formatDateTime(log.time)}">
+                    ${formatTimeAgo(log.time)}
+                </td>
+                <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+                <td>
                     <div class="user-cell">
                         <div class="user-avatar">
-                            ${user.username?.charAt(0)?.toUpperCase() || user.user_id?.charAt(0) || '?'}
+                            ${log.actor?.charAt(0)?.toUpperCase() || '?'}
                         </div>
                         <div class="user-details">
-                            <div class="user-name">
-                                ${user.first_name || user.last_name ? 
-                                    `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
-                                    user.username || 'Anonymous'}
-                            </div>
-                            <div class="user-username">
-                                @${user.username || 'no_username'}
-                            </div>
-                            <div class="user-id">ID: ${user.user_id}</div>
+                            <div class="user-name">${log.actor || 'System'}</div>
+                            <div class="user-username">${log.source || 'System'}</div>
                         </div>
                     </div>
-                `;
+                </td>
+                <td>${log.details || ''}</td>
+                <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}">${log.source}</span></td>
+            </tr>
+        `;
+    }).join('');
+}
 
-                 
-                let statusHtml = '';
-                if (user.is_banned === true) {
-                    statusHtml += '<span class="action-badge danger">BANNED</span>';
-                } else {
-                    statusHtml += '<span class="action-badge success">ACTIVE</span>';
-                }
+// User management functions
+async function loadUsers(page = 1) {
+    if (!currentUser) return;
+    
+    const searchTerm = document.getElementById('user-search')?.value || '';
+    const tbody = document.getElementById('users-tbody');
+    
+    if (!tbody) return;
+    
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading users...</td></tr>';
 
-                if (user.is_admin === true) {
-                    statusHtml += '<span class="action-badge primary ml-1">ADMIN</span>';
-                }
-
-                return `
-                <tr>
-                    <td>${userCell}</td>
-                    <td><strong>${new Decimal(user.score || 0).toFixed(9)}</strong></td>
-                    <td>${new Decimal(user.click_value || 0).toFixed(9)}</td>
-                    <td>${new Decimal(user.auto_click_rate || 0).toFixed(9)}</td>
-                    <td class="timestamp" title="${user.last_updated ? formatDateTime(user.last_updated) : 'Never'}">
-                        ${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}
-                    </td>
-                    <td>${statusHtml}</td>
-                    <td>
-                        <button class="btn btn-primary btn-sm" onclick="editUser('${user.user_id}')">
-                            <i class="fas fa-edit"></i> Edit
-                        </button>
-                    </td>
-                </tr>
-                `;
-            }).join('');
+    try {
+        const url = new URL(`${BACKEND_URL}/admin/users`);
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', itemsPerPage);
+        if (searchTerm) {
+            url.searchParams.set('search', searchTerm);
         }
 
-        async function editUser(userId) {
-            const user = users.find(u => u.user_id == userId);
-            if (!user) {
-                showNotification('User not found', 'error');
-                return;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
             }
+        });
 
-            currentEditingUserId = userId;
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            const form = document.getElementById('edit-user-form');
-            if (!form) return;
+        const data = await response.json();
+        users = data.users || [];
+        currentPage.users = page;
+        
+        renderUsersTable();
+        renderPagination('users', data.totalCount || 0, page);
 
-            form.innerHTML = `
-                <div class="modal-body">
-                    <div class="user-cell mb-3">
-                        <div class="user-avatar">
-                            ${user.username?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name">
-                                ${user.first_name || user.last_name ? 
-                                    `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
-                                    user.username || 'Anonymous'}
-                            </div>
-                            <div class="user-username">
-                                @${user.username || 'no_username'}
-                            </div>
-                            <div class="user-id">ID: ${user.user_id}</div>
-                        </div>
-                    </div>
+    } catch (error) {
+        console.error('Error loading users:', error);
+        tbody.innerHTML = `<tr><td colspan="7" class="error">Error: ${error.message}</td></tr>`;
+        showNotification('Failed to load users', 'error');
+    }
+}
 
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>User ID</label>
-                            <input type="text" class="form-control" value="${user.user_id}" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" class="form-control" value="${user.username || ''}" disabled>
-                        </div>
-                    </div>
+function renderUsersTable() {
+    const tbody = document.getElementById('users-tbody');
+    if (!tbody) return;
 
-                    <h4 class="section-title">Stats Management</h4>
-                    <div class="grid-2">
-                        <div class="form-group">
-                            <label>Coins</label>
-                            <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}">
-                        </div>
-                        <div class="form-group">
-                            <label>Per Click</label>
-                            <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}">
-                        </div>
-                    </div>
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
+        return;
+    }
 
-                    <div class="action-grid mt-3">
-                        <button class="btn btn-success" onclick="showAddCoinsModal()">
-                            <i class="fas fa-plus-circle"></i> Add Coins
-                        </button>
-                        <button class="btn btn-warning" onclick="resetUserScore('${user.user_id}')">
-                            <i class="fas fa-redo"></i> Reset Score
-                        </button>
-                        ${user.is_banned ? 
-                            `<button class="btn btn-success" onclick="unbanUser('${user.user_id}')">
-                                <i class="fas fa-check"></i> Unban User
-                            </button>` :
-                            `<button class="btn btn-danger" onclick="banUser('${user.user_id}')">
-                                <i class="fas fa-ban"></i> Ban User
-                            </button>`
-                        }
-                        <button class="btn btn-danger" onclick="deleteUser('${user.user_id}')">
-                            <i class="fas fa-trash"></i> Delete User
-                        </button>
-                    </div>
+    tbody.innerHTML = users.map(user => {
+        // User cell
+        const userCell = `
+            <div class="user-cell">
+                <div class="user-avatar">
+                    ${user.username?.charAt(0)?.toUpperCase() || user.user_id?.charAt(0) || '?'}
                 </div>
-
-                <div class="modal-footer">
-                    <button class="btn btn-primary" onclick="saveUserChanges()">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
-                    <button class="btn btn-outline" onclick="closeModal('edit-user-modal')">
-                        Cancel
-                    </button>
+                <div class="user-details">
+                    <div class="user-name">
+                        ${user.first_name || user.last_name ? 
+                            `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
+                            user.username || 'Anonymous'}
+                    </div>
+                    <div class="user-username">
+                        @${user.username || 'no_username'}
+                    </div>
+                    <div class="user-id">ID: ${user.user_id}</div>
                 </div>
+            </div>
+        `;
+
+        // Status badges
+        let statusHtml = '';
+        if (user.is_banned === true) {
+            statusHtml += '<span class="action-badge danger">BANNED</span>';
+        } else {
+            statusHtml += '<span class="action-badge success">ACTIVE</span>';
+        }
+
+        if (user.is_admin === true) {
+            statusHtml += '<span class="action-badge primary ml-1">ADMIN</span>';
+        }
+
+        return `
+        <tr>
+            <td>${userCell}</td>
+            <td><strong>${new Decimal(user.score || 0).toFixed(9)}</strong></td>
+            <td>${new Decimal(user.click_value || 0).toFixed(9)}</td>
+            <td>${new Decimal(user.auto_click_rate || 0).toFixed(9)}</td>
+            <td class="timestamp" title="${user.last_updated ? formatDateTime(user.last_updated) : 'Never'}">
+                ${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}
+            </td>
+            <td>${statusHtml}</td>
+            <td>
+                <button class="btn btn-primary btn-sm edit-user-btn" data-user-id="${user.user_id}">
+                    <i class="fas fa-edit"></i> Edit
+                </button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+async function editUser(userId) {
+    const user = users.find(u => u.user_id == userId);
+    if (!user) {
+        showNotification('User not found', 'error');
+        return;
+    }
+
+    currentEditingUserId = userId;
+
+    const form = document.getElementById('edit-user-form');
+    if (!form) return;
+
+    form.innerHTML = `
+        <div class="modal-body">
+            <div class="user-cell mb-3">
+                <div class="user-avatar">
+                    ${user.username?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div class="user-details">
+                    <div class="user-name">
+                        ${user.first_name || user.last_name ? 
+                            `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
+                            user.username || 'Anonymous'}
+                    </div>
+                    <div class="user-username">
+                        @${user.username || 'no_username'}
+                    </div>
+                    <div class="user-id">ID: ${user.user_id}</div>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>User ID</label>
+                    <input type="text" class="form-control" value="${user.user_id}" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" class="form-control" value="${user.username || ''}" disabled>
+                </div>
+            </div>
+
+            <h4 class="section-title">Stats Management</h4>
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Coins</label>
+                    <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}">
+                </div>
+                <div class="form-group">
+                    <label>Per Click</label>
+                    <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}">
+                </div>
+            </div>
+
+            <div class="action-grid mt-3">
+                <button class="btn btn-success" id="add-coins-btn">
+                    <i class="fas fa-plus-circle"></i> Add Coins
+                </button>
+                <button class="btn btn-warning" id="reset-score-btn" data-user-id="${user.user_id}">
+                    <i class="fas fa-redo"></i> Reset Score
+                </button>
+                ${user.is_banned ? 
+                    `<button class="btn btn-success" id="unban-btn" data-user-id="${user.user_id}">
+                        <i class="fas fa-check"></i> Unban User
+                    </button>` :
+                    `<button class="btn btn-danger" id="ban-btn" data-user-id="${user.user_id}">
+                        <i class="fas fa-ban"></i> Ban User
+                    </button>`
+                }
+                <button class="btn btn-danger" id="delete-user-btn" data-user-id="${user.user_id}">
+                    <i class="fas fa-trash"></i> Delete User
+                </button>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn btn-primary" id="save-user-changes">
+                <i class="fas fa-save"></i> Save Changes
+            </button>
+            <button class="btn btn-outline" id="cancel-edit-user">
+                Cancel
+            </button>
+        </div>
+    `;
+
+    document.getElementById('edit-user-modal').classList.add('active');
+}
+
+function showAddCoinsModal() {
+    document.getElementById('add-coins-modal').classList.add('active');
+}
+
+async function addCoinsToUser() {
+    if (!currentEditingUserId) {
+        showNotification('No user selected', 'error');
+        return;
+    }
+
+    const amount = document.getElementById('add-coins-amount').value;
+
+    if (!amount || new Decimal(amount).lessThanOrEqualTo(0)) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}/add-coins`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            },
+            body: JSON.stringify({ 
+                amount: new Decimal(amount).toFixed(9)
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || 'Failed to add coins');
+        }
+
+        showNotification(`Added ${amount} coins to user`, 'success');
+        closeModal('add-coins-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('add_coins', currentEditingUserId, `Added ${amount} coins`);
+
+    } catch (error) {
+        console.error('Error adding coins:', error);
+        showNotification(`Failed to add coins: ${error.message}`, 'error');
+    }
+}
+
+async function banUser(userId) {
+    if (!confirm('Are you sure you want to ban this user?')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/ban`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to ban user');
+
+        showNotification('User banned successfully', 'success');
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('ban_user', userId, 'User banned');
+
+    } catch (error) {
+        console.error('Error banning user:', error);
+        showNotification(`Failed to ban user: ${error.message}`, 'error');
+    }
+}
+
+async function unbanUser(userId) {
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/unban`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to unban user');
+
+        showNotification('User unbanned successfully', 'success');
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('unban_user', userId, 'User unbanned');
+
+    } catch (error) {
+        console.error('Error unbanning user:', error);
+        showNotification(`Failed to unban user: ${error.message}`, 'error');
+    }
+}
+
+async function resetUserScore(userId) {
+    if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to reset user score');
+
+        showNotification('User score reset to 0', 'success');
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('reset_score', userId, 'Score reset to 0');
+
+    } catch (error) {
+        console.error('Error resetting score:', error);
+        showNotification(`Failed to reset score: ${error.message}`, 'error');
+    }
+}
+
+async function deleteUser(userId) {
+    if (!confirm('⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to delete user');
+
+        showNotification('User deleted successfully', 'success');
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('delete_user', userId, 'User permanently deleted');
+
+    } catch (error) {
+        console.error('Error deleting user:', error);
+        showNotification(`Failed to delete user: ${error.message}`, 'error');
+    }
+}
+
+async function saveUserChanges() {
+    if (!currentEditingUserId) {
+        showNotification('No user selected', 'error');
+        return;
+    }
+
+    const score = document.getElementById('edit-score').value;
+    const clickValue = document.getElementById('edit-click-value').value;
+
+    if (!score || !clickValue) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            },
+            body: JSON.stringify({
+                score: new Decimal(score).toFixed(9),
+                click_value: new Decimal(clickValue).toFixed(9)
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        showNotification('User updated successfully', 'success');
+        closeModal('edit-user-modal');
+        loadUsers(currentPage.users);
+        await logAdminAction('update_user', currentEditingUserId, 'User stats updated');
+
+    } catch (error) {
+        console.error('Error saving user changes:', error);
+        showNotification(`Failed to save changes: ${error.message}`, 'error');
+    }
+}
+
+// Transaction functions
+async function loadTransactions(page = 1) {
+    if (!currentUser) return;
+
+    const tbody = document.getElementById('transactions-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="3" class="loading">Loading transactions...</td></tr>';
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/transactions?page=${page}&limit=${itemsPerPage}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        transactions = data.transactions || [];
+        currentPage.transactions = page;
+        
+        renderTransactionsTable();
+        renderPagination('transactions', data.totalCount || 0, page);
+
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        tbody.innerHTML = `<tr><td colspan="3" class="error">Error: ${error.message}</td></tr>`;
+        showNotification('Failed to load transactions', 'error');
+    }
+}
+
+function renderTransactionsTable() {
+    const tbody = document.getElementById('transactions-tbody');
+    if (!tbody) return;
+
+    if (transactions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = transactions.map(tx => {
+        // Sender cell
+        const senderCell = `
+            <div class="user-cell">
+                <div class="user-avatar" style="background: linear-gradient(135deg, var(--danger) 0%, var(--danger-light) 100%);">
+                    ${tx.sender_id?.toString().charAt(0) || '?'}
+                </div>
+                <div class="user-details">
+                    <div class="user-name">Sender</div>
+                    <div class="user-username">${tx.sender_id}</div>
+                    <div class="user-id">ID: ${tx.sender_id}</div>
+                </div>
+            </div>
+        `;
+
+        // Receiver cell
+        const receiverCell = `
+            <div class="user-cell">
+                <div class="user-avatar" style="background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);">
+                    ${tx.receiver_id?.toString().charAt(0) || '?'}
+                </div>
+                <div class="user-details">
+                    <div class="user-name">Receiver</div>
+                    <div class="user-username">${tx.receiver_username || tx.receiver_id}</div>
+                    <div class="user-id">ID: ${tx.receiver_id}</div>
+                </div>
+            </div>
+        `;
+
+        const flowDisplay = `
+            <div class="transaction-flow">
+                ${senderCell}
+                <div class="flow-direction">→</div>
+                ${receiverCell}
+            </div>
+        `;
+
+        return `
+        <tr>
+            <td>${flowDisplay}</td>
+            <td>
+                <span class="flow-amount">
+                    <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
+                </span>
+            </td>
+            <td class="timestamp" title="${formatDateTime(tx.created_at)}">
+                ${formatTimeAgo(tx.created_at)}
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+// Log functions
+async function loadUserLogs(page = 1) {
+    if (!currentUser) return;
+
+    const tbody = document.getElementById('user-logs-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="4" class="loading">Loading user logs...</td></tr>';
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/user-logs?page=${page}&limit=${itemsPerPage}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        userLogs = data.logs || [];
+        currentPage.userLogs = page;
+        
+        renderUserLogsTable();
+        renderPagination('user-logs', data.totalCount || 0, page);
+
+    } catch (error) {
+        console.error('Error loading user logs:', error);
+        tbody.innerHTML = `<tr><td colspan="4" class="error">Error: ${error.message}</td></tr>`;
+        showNotification('Failed to load user logs', 'error');
+    }
+}
+
+function renderUserLogsTable() {
+    const tbody = document.getElementById('user-logs-tbody');
+    if (!tbody) return;
+
+    if (userLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = userLogs.map(log => {
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+
+        const userCell = `
+            <div class="user-cell">
+                <div class="user-avatar">
+                    ${log.username?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+                <div class="user-details">
+                    <div class="user-name">${log.username || 'Anonymous'}</div>
+                    <div class="user-id">ID: ${log.user_id}</div>
+                </div>
+            </div>
+        `;
+
+        return `
+        <tr>
+            <td>${userCell}</td>
+            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+            <td>${log.details || ''}</td>
+            <td class="timestamp" title="${formatDateTime(log.created_at)}">
+                ${formatTimeAgo(log.created_at)}
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+async function loadAdminLogs(page = 1) {
+    if (!currentUser) return;
+
+    const tbody = document.getElementById('admin-logs-tbody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading admin logs...</td></tr>';
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/admin-logs?page=${page}&limit=${itemsPerPage}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        adminLogs = data.logs || [];
+        currentPage.adminLogs = page;
+        
+        renderAdminLogsTable();
+        renderPagination('admin-logs', data.totalCount || 0, page);
+
+    } catch (error) {
+        console.error('Error loading admin logs:', error);
+        tbody.innerHTML = `<tr><td colspan="5" class="error">Error: ${error.message}</td></tr>`;
+        showNotification('Failed to load admin logs', 'error');
+    }
+}
+
+function renderAdminLogsTable() {
+    const tbody = document.getElementById('admin-logs-tbody');
+    if (!tbody) return;
+
+    if (adminLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = adminLogs.map(log => {
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
+
+        // Check if this log is from the current user
+        const isCurrentUser = log.admin_id === currentUser?.id;
+        const adminDisplay = isCurrentUser ? 'You' : `Admin ${log.admin_id?.substring(0, 8)}...`;
+
+        // Format details if it's JSON
+        let formattedDetails = log.details;
+        try {
+            const parsed = JSON.parse(log.details);
+            formattedDetails = `<div class="json-display">${JSON.stringify(parsed, null, 2)}</div>`;
+        } catch (e) {
+            // Not JSON, keep as is
+        }
+
+        const adminCell = `
+            <div class="user-cell">
+                <div class="user-avatar" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);">
+                    ${isCurrentUser ? 'Y' : 'A'}
+                </div>
+                <div class="user-details">
+                    <div class="user-name">${adminDisplay}</div>
+                    <div class="user-id">ID: ${log.admin_id}</div>
+                </div>
+            </div>
+        `;
+
+        return `
+        <tr>
+            <td>${adminCell}</td>
+            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+            <td>${log.target_user_id ? `User ${log.target_user_id}` : 'System'}</td>
+            <td>${formattedDetails}</td>
+            <td class="timestamp" title="${formatDateTime(log.created_at)}">
+                ${formatTimeAgo(log.created_at)}
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+// Modal functions
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    currentEditingUserId = null;
+}
+
+function renderPagination(type, totalCount, currentPageNum) {
+    const totalPages = Math.ceil(totalCount / itemsPerPage);
+    const paginationElement = document.getElementById(`${type}-pagination`);
+    
+    if (!paginationElement) return;
+    
+    if (totalPages <= 1) {
+        paginationElement.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '';
+    
+    if (currentPageNum > 1) {
+        paginationHTML += `
+            <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+        `;
+    }
+    
+    for (let i = 1; i <= totalPages; i++) {
+        if (i === currentPageNum) {
+            paginationHTML += `<button class="page-btn active">${i}</button>`;
+        } else {
+            paginationHTML += `
+                <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">
+                    ${i}
+                </button>
             `;
-
-            document.getElementById('edit-user-modal').classList.add('active');
         }
+    }
+    
+    if (currentPageNum < totalPages) {
+        paginationHTML += `
+            <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+        `;
+    }
+    
+    paginationElement.innerHTML = paginationHTML;
+}
 
-        function showAddCoinsModal() {
-            document.getElementById('add-coins-modal').classList.add('active');
+async function logAdminAction(actionType, targetUserId, details) {
+    if (!supabaseClient || !currentUser) return;
+
+    try {
+        await supabaseClient
+            .from('admin_logs')
+            .insert({
+                admin_id: currentUser.id,
+                action_type: actionType,
+                target_user_id: targetUserId,
+                details: details
+            });
+    } catch (error) {
+        console.error('Error logging admin action:', error);
+    }
+}
+
+function debounceSearch() {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        loadUsers(1);
+    }, 500);
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Login button
+    document.getElementById('login-button')?.addEventListener('click', login);
+    
+    // Login with Enter key
+    document.getElementById('password')?.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            login();
         }
-
-        async function addCoinsToUser() {
-            if (!currentEditingUserId) {
-                showNotification('No user selected', 'error');
-                return;
-            }
-
-            const amount = document.getElementById('add-coins-amount').value;
-
-            if (!amount || new Decimal(amount).lessThanOrEqualTo(0)) {
-                showNotification('Please enter a valid amount', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}/add-coins`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    },
-                    body: JSON.stringify({ 
-                        amount: new Decimal(amount).toFixed(9)
-                    })
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to add coins');
-                }
-
-                showNotification(`Added ${amount} coins to user`, 'success');
-                closeModal('add-coins-modal');
-                loadUsers(currentPage.users);
-
-            } catch (error) {
-                console.error('Error adding coins:', error);
-                showNotification(`Failed to add coins: ${error.message}`, 'error');
-            }
-        }
-
-        async function banUser(userId) {
-            if (!confirm('Are you sure you want to ban this user?')) return;
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/ban`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to ban user');
-
-                showNotification('User banned successfully', 'success');
-                closeModal('edit-user-modal');
-                loadUsers(currentPage.users);
-                await logAdminAction('ban_user', userId, 'User banned');
-
-            } catch (error) {
-                console.error('Error banning user:', error);
-                showNotification(`Failed to ban user: ${error.message}`, 'error');
-            }
-        }
-
-        async function unbanUser(userId) {
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/unban`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to unban user');
-
-                showNotification('User unbanned successfully', 'success');
-                closeModal('edit-user-modal');
-                loadUsers(currentPage.users);
-                await logAdminAction('unban_user', userId, 'User unbanned');
-
-            } catch (error) {
-                console.error('Error unbanning user:', error);
-                showNotification(`Failed to unban user: ${error.message}`, 'error');
-            }
-        }
-
-        async function resetUserScore(userId) {
-            if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to reset user score');
-
-                showNotification('User score reset to 0', 'success');
-                closeModal('edit-user-modal');
-                loadUsers(currentPage.users);
-                await logAdminAction('reset_score', userId, 'Score reset to 0');
-
-            } catch (error) {
-                console.error('Error resetting score:', error);
-                showNotification(`Failed to reset score: ${error.message}`, 'error');
-            }
-        }
-
-        async function deleteUser(userId) {
-            if (!confirm('⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!')) return;
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error('Failed to delete user');
-
-                showNotification('User deleted successfully', 'success');
-                closeModal('edit-user-modal');
-                loadUsers(currentPage.users);
-                await logAdminAction('delete_user', userId, 'User permanently deleted');
-
-            } catch (error) {
-                console.error('Error deleting user:', error);
-                showNotification(`Failed to delete user: ${error.message}`, 'error');
-            }
-        }
-
-        async function saveUserChanges() {
-            if (!currentEditingUserId) {
-                showNotification('No user selected', 'error');
-                return;
-            }
-
-            const score = document.getElementById('edit-score').value;
-            const clickValue = document.getElementById('edit-click-value').value;
-
-            if (!score || !clickValue) {
-                showNotification('Please fill in all required fields', 'error');
-                return;
-            }
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    },
-                    body: JSON.stringify({
-                        score: new Decimal(score).toFixed(9),
-                        click_value: new Decimal(clickValue).toFixed(9)
-                    })
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                showNotification('User updated successfully', 'success');
-                closeModal('edit-user-modal');
-                loadUsers(currentPage.users);
-                await logAdminAction('update_user', currentEditingUserId, 'User stats updated');
-
-            } catch (error) {
-                console.error('Error saving user changes:', error);
-                showNotification(`Failed to save changes: ${error.message}`, 'error');
-            }
-        }
-
-         
-        async function loadTransactions(page = 1) {
-            if (!currentUser) return;
-
-            const tbody = document.getElementById('transactions-tbody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '<tr><td colspan="3" class="loading">Loading transactions...</td></tr>';
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/transactions?page=${page}&limit=${itemsPerPage}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const data = await response.json();
-                transactions = data.transactions || [];
-                currentPage.transactions = page;
-                
-                renderTransactionsTable();
-                renderPagination('transactions', data.totalCount || 0, page);
-
-            } catch (error) {
-                console.error('Error loading transactions:', error);
-                tbody.innerHTML = `<tr><td colspan="3" class="error">Error: ${error.message}</td></tr>`;
-                showNotification('Failed to load transactions', 'error');
-            }
-        }
-
-        function renderTransactionsTable() {
-            const tbody = document.getElementById('transactions-tbody');
-            if (!tbody) return;
-
-            if (transactions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = transactions.map(tx => {
-                 
-                const senderCell = `
-                    <div class="user-cell">
-                        <div class="user-avatar" style="background: linear-gradient(135deg, var(--danger) 0%, var(--danger-light) 100%);">
-                            ${tx.sender_id?.toString().charAt(0) || '?'}
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name">Sender</div>
-                            <div class="user-username">${tx.sender_id}</div>
-                            <div class="user-id">ID: ${tx.sender_id}</div>
-                        </div>
-                    </div>
-                `;
-
-                const receiverCell = `
-                    <div class="user-cell">
-                        <div class="user-avatar" style="background: linear-gradient(135deg, var(--success) 0%, var(--success-light) 100%);">
-                            ${tx.receiver_id?.toString().charAt(0) || '?'}
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name">Receiver</div>
-                            <div class="user-username">${tx.receiver_username || tx.receiver_id}</div>
-                            <div class="user-id">ID: ${tx.receiver_id}</div>
-                        </div>
-                    </div>
-                `;
-
-                const flowDisplay = `
-                    <div class="transaction-flow">
-                        ${senderCell}
-                        <div class="flow-direction">→</div>
-                        ${receiverCell}
-                    </div>
-                `;
-
-                return `
-                <tr>
-                    <td>${flowDisplay}</td>
-                    <td>
-                        <span class="flow-amount">
-                            <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
-                        </span>
-                    </td>
-                    <td class="timestamp" title="${formatDateTime(tx.created_at)}">
-                        ${formatTimeAgo(tx.created_at)}
-                    </td>
-                </tr>
-                `;
-            }).join('');
-        }
-
-         
-        async function loadUserLogs(page = 1) {
-            if (!currentUser) return;
-
-            const tbody = document.getElementById('user-logs-tbody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '<tr><td colspan="4" class="loading">Loading user logs...</td></tr>';
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/user-logs?page=${page}&limit=${itemsPerPage}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const data = await response.json();
-                userLogs = data.logs || [];
-                currentPage.userLogs = page;
-                
-                renderUserLogsTable();
-                renderPagination('user-logs', data.totalCount || 0, page);
-
-            } catch (error) {
-                console.error('Error loading user logs:', error);
-                tbody.innerHTML = `<tr><td colspan="4" class="error">Error: ${error.message}</td></tr>`;
-                showNotification('Failed to load user logs', 'error');
-            }
-        }
-
-        function renderUserLogsTable() {
-            const tbody = document.getElementById('user-logs-tbody');
-            if (!tbody) return;
-
-            if (userLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = userLogs.map(log => {
-                const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
-                const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
-
-                const userCell = `
-                    <div class="user-cell">
-                        <div class="user-avatar">
-                            ${log.username?.charAt(0)?.toUpperCase() || '?'}
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name">${log.username || 'Anonymous'}</div>
-                            <div class="user-id">ID: ${log.user_id}</div>
-                        </div>
-                    </div>
-                `;
-
-                return `
-                <tr>
-                    <td>${userCell}</td>
-                    <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-                    <td>${log.details || ''}</td>
-                    <td class="timestamp" title="${formatDateTime(log.created_at)}">
-                        ${formatTimeAgo(log.created_at)}
-                    </td>
-                </tr>
-                `;
-            }).join('');
-        }
-
-         
-        async function loadAdminLogs(page = 1) {
-            if (!currentUser) return;
-
-            const tbody = document.getElementById('admin-logs-tbody');
-            if (!tbody) return;
-
-            tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading admin logs...</td></tr>';
-
-            try {
-                const response = await fetch(`${BACKEND_URL}/admin/admin-logs?page=${page}&limit=${itemsPerPage}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-admin-secret': ADMIN_SECRET
-                    }
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const data = await response.json();
-                adminLogs = data.logs || [];
-                currentPage.adminLogs = page;
-                
-                renderAdminLogsTable();
-                renderPagination('admin-logs', data.totalCount || 0, page);
-
-            } catch (error) {
-                console.error('Error loading admin logs:', error);
-                tbody.innerHTML = `<tr><td colspan="5" class="error">Error: ${error.message}</td></tr>`;
-                showNotification('Failed to load admin logs', 'error');
-            }
-        }
-
-        function renderAdminLogsTable() {
-            const tbody = document.getElementById('admin-logs-tbody');
-            if (!tbody) return;
-
-            if (adminLogs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = adminLogs.map(log => {
-                const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
-                const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
-
-                 
-                const isCurrentUser = log.admin_id === currentUser?.id;
-                const adminDisplay = isCurrentUser ? 'You' : `Admin ${log.admin_id?.substring(0, 8)}...`;
-
-                 
-                let formattedDetails = log.details;
-                try {
-                    const parsed = JSON.parse(log.details);
-                    formattedDetails = `<div class="json-display">${JSON.stringify(parsed, null, 2)}</div>`;
-                } catch (e) {
-                     
-                }
-
-                const adminCell = `
-                    <div class="user-cell">
-                        <div class="user-avatar" style="background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);">
-                            ${isCurrentUser ? 'Y' : 'A'}
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name">${adminDisplay}</div>
-                            <div class="user-id">ID: ${log.admin_id}</div>
-                        </div>
-                    </div>
-                `;
-
-                return `
-                <tr>
-                    <td>${adminCell}</td>
-                    <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-                    <td>${log.target_user_id ? `User ${log.target_user_id}` : 'System'}</td>
-                    <td>${formattedDetails}</td>
-                    <td class="timestamp" title="${formatDateTime(log.created_at)}">
-                        ${formatTimeAgo(log.created_at)}
-                    </td>
-                </tr>
-                `;
-            }).join('');
-        }
-
-         
-        function closeModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('active');
-            }
+    });
+    
+    // Navigation buttons
+    document.getElementById('dashboard-nav')?.addEventListener('click', () => showSection('dashboard'));
+    document.getElementById('users-nav')?.addEventListener('click', () => showSection('users'));
+    document.getElementById('transactions-nav')?.addEventListener('click', () => showSection('transactions'));
+    document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
+    document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
+    
+    // Logout button
+    document.getElementById('logout-button')?.addEventListener('click', logout);
+    
+    // Refresh buttons
+    document.getElementById('refresh-data-btn')?.addEventListener('click', refreshAllData);
+    document.getElementById('dashboard-refresh')?.addEventListener('click', loadDashboardStats);
+    document.getElementById('refresh-activity-btn')?.addEventListener('click', loadRecentActivity);
+    
+    // Search functionality
+    document.getElementById('user-search-btn')?.addEventListener('click', () => loadUsers(1));
+    document.getElementById('user-search')?.addEventListener('input', debounceSearch);
+    
+    // Export buttons
+    document.getElementById('export-users-btn')?.addEventListener('click', exportUserData);
+    document.getElementById('export-transactions-btn')?.addEventListener('click', exportTransactionData);
+    
+    // Broadcast functionality
+    document.getElementById('broadcast-btn')?.addEventListener('click', showBroadcastModal);
+    document.getElementById('send-broadcast-btn')?.addEventListener('click', sendBroadcast);
+    document.getElementById('cancel-broadcast-btn')?.addEventListener('click', () => closeModal('broadcast-modal'));
+    
+    // Modal close buttons
+    document.getElementById('close-edit-modal')?.addEventListener('click', () => closeModal('edit-user-modal'));
+    document.getElementById('close-add-coins-modal')?.addEventListener('click', () => closeModal('add-coins-modal'));
+    document.getElementById('close-broadcast-modal')?.addEventListener('click', () => closeModal('broadcast-modal'));
+    
+    // Close modals when clicking outside
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('modal')) {
+            e.target.classList.remove('active');
             currentEditingUserId = null;
         }
-
-        function renderPagination(type, totalCount, currentPageNum) {
-            const totalPages = Math.ceil(totalCount / itemsPerPage);
-            const paginationElement = document.getElementById(`${type}-pagination`);
-            
-            if (!paginationElement) return;
-            
-            if (totalPages <= 1) {
-                paginationElement.innerHTML = '';
-                return;
-            }
-            
-            let paginationHTML = '';
-            
-            if (currentPageNum > 1) {
-                paginationHTML += `
-                    <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                `;
-            }
-            
-            for (let i = 1; i <= totalPages; i++) {
-                if (i === currentPageNum) {
-                    paginationHTML += `<button class="page-btn active">${i}</button>`;
-                } else {
-                    paginationHTML += `
-                        <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">
-                            ${i}
-                        </button>
-                    `;
-                }
-            }
-            
-            if (currentPageNum < totalPages) {
-                paginationHTML += `
-                    <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                `;
-            }
-            
-            paginationElement.innerHTML = paginationHTML;
-        }
-
-        async function logAdminAction(actionType, targetUserId, details) {
-            if (!supabaseClient || !currentUser) return;
-
-            try {
-                await supabaseClient
-                    .from('admin_logs')
-                    .insert({
-                        admin_id: currentUser.id,
-                        action_type: actionType,
-                        target_user_id: targetUserId,
-                        details: details
-                    });
-            } catch (error) {
-                console.error('Error logging admin action:', error);
-            }
-        }
-
-        function debounceSearch() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => {
-                loadUsers(1);
-            }, 500);
-        }
-
-         
-        function setupEventListeners() {
-             
-            document.getElementById('password')?.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    login();
-                }
+    });
+    
+    // Close modals with Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.active').forEach(modal => {
+                modal.classList.remove('active');
             });
-
-             
-            document.addEventListener('click', (e) => {
-                if (e.target.classList.contains('modal')) {
-                    e.target.classList.remove('active');
-                    currentEditingUserId = null;
-                }
-            });
-
-             
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    document.querySelectorAll('.modal.active').forEach(modal => {
-                        modal.classList.remove('active');
-                    });
-                    currentEditingUserId = null;
-                }
-            });
-
-             
-            document.addEventListener('keydown', (e) => {
-                if (e.ctrlKey && e.key === 'r') {
-                    e.preventDefault();
-                    refreshAllData();
-                }
-            });
+            currentEditingUserId = null;
         }
-
-         
-        async function refreshAllData() {
-            showNotification('Refreshing all data...', 'info');
+    });
+    
+    // Refresh all data with Ctrl+R
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'r') {
+            e.preventDefault();
+            refreshAllData();
+        }
+    });
+    
+    // Sortable table headers (delegated event)
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('sortable')) {
+            const field = e.target.dataset.sort;
+            const section = e.target.closest('.section').id;
             
-            try {
-                await loadDashboardStats();
-                await loadUsers(currentPage.users);
-                await loadUserLogs(currentPage.userLogs);
-                await loadAdminLogs(currentPage.adminLogs);
-                await loadTransactions(currentPage.transactions);
-                
-                showNotification('All data refreshed successfully', 'success');
-            } catch (error) {
-                console.error('Error refreshing data:', error);
-                showNotification('Failed to refresh data', 'error');
-            }
-        }
-
-        function exportUserData() {
-            if (users.length === 0) {
-                showNotification('No users to export', 'warning');
-                return;
-            }
-
-            let csvContent = "User ID,Username,First Name,Last Name,Coins,Per Click,Per Second,Status\n";
-            
-            users.forEach(user => {
-                const status = user.is_banned ? "Banned" : "Active";
-                const row = [
-                    user.user_id,
-                    user.username || '',
-                    user.first_name || '',
-                    user.last_name || '',
-                    new Decimal(user.score || 0).toFixed(9),
-                    new Decimal(user.click_value || 0).toFixed(9),
-                    new Decimal(user.auto_click_rate || 0).toFixed(9),
-                    status
-                ].map(field => `"${field}"`).join(',');
-                csvContent += row + '\n';
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            showNotification('User data exported successfully', 'success');
-        }
-
-        function exportTransactionData() {
-            if (transactions.length === 0) {
-                showNotification('No transactions to export', 'warning');
-                return;
-            }
-
-            let csvContent = "Transaction ID,Sender ID,Receiver ID,Amount,Date\n";
-            
-            transactions.forEach(tx => {
-                const row = [
-                    tx.id || '',
-                    tx.sender_id,
-                    tx.receiver_id,
-                    new Decimal(tx.amount || 0).toFixed(9),
-                    formatDateTime(tx.created_at)
-                ].map(field => `"${field}"`).join(',');
-                csvContent += row + '\n';
-            });
-
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `transactions_export_${new Date().toISOString().split('T')[0]}.csv`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-            
-            showNotification('Transaction data exported successfully', 'success');
-        }
-
-        function showBroadcastModal() {
-            document.getElementById('broadcast-modal').classList.add('active');
-        }
-
-        async function sendBroadcast() {
-            const message = document.getElementById('broadcast-message').value;
-            const type = document.getElementById('broadcast-type').value;
-
-            if (!message.trim()) {
-                showNotification('Please enter a message', 'error');
-                return;
-            }
-
-            showNotification('Sending broadcast...', 'info');
-
-            try {
-                 
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                
-                await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
-                
-                closeModal('broadcast-modal');
-                document.getElementById('broadcast-message').value = '';
-                showNotification('Broadcast sent successfully', 'success');
-            } catch (error) {
-                console.error('Error sending broadcast:', error);
-                showNotification(`Broadcast failed: ${error.message}`, 'error');
-            }
-        }
-
-         
-        function sortUsers(field) {
-            if (sortConfig.users.field === field) {
-                sortConfig.users.direction = sortConfig.users.direction === 'asc' ? 'desc' : 'asc';
+            if (sortConfig[section].field === field) {
+                sortConfig[section].direction = sortConfig[section].direction === 'asc' ? 'desc' : 'asc';
             } else {
-                sortConfig.users.field = field;
-                sortConfig.users.direction = 'asc';
+                sortConfig[section].field = field;
+                sortConfig[section].direction = 'asc';
             }
-            currentPage.users = 1;
-            loadUsers(currentPage.users);
-        }
-
-        function sortTransactions(field) {
-            if (sortConfig.transactions.field === field) {
-                sortConfig.transactions.direction = sortConfig.transactions.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortConfig.transactions.field = field;
-                sortConfig.transactions.direction = 'asc';
+            
+            currentPage[section] = 1;
+            
+            switch(section) {
+                case 'users':
+                    loadUsers(currentPage.users);
+                    break;
+                case 'transactions':
+                    loadTransactions(currentPage.transactions);
+                    break;
+                case 'user-logs':
+                    loadUserLogs(currentPage.userLogs);
+                    break;
+                case 'admin-logs':
+                    loadAdminLogs(currentPage.adminLogs);
+                    break;
             }
-            currentPage.transactions = 1;
-            loadTransactions(currentPage.transactions);
         }
-
-        function sortUserLogs(field) {
-            if (sortConfig.userLogs.field === field) {
-                sortConfig.userLogs.direction = sortConfig.userLogs.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortConfig.userLogs.field = field;
-                sortConfig.userLogs.direction = 'asc';
-            }
-            currentPage.userLogs = 1;
-            loadUserLogs(currentPage.userLogs);
+        
+        // Edit user buttons (delegated)
+        if (e.target.closest('.edit-user-btn')) {
+            const userId = e.target.closest('.edit-user-btn').dataset.userId;
+            editUser(userId);
         }
-
-        function sortAdminLogs(field) {
-            if (sortConfig.adminLogs.field === field) {
-                sortConfig.adminLogs.direction = sortConfig.adminLogs.direction === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortConfig.adminLogs.field = field;
-                sortConfig.adminLogs.direction = 'asc';
-            }
-            currentPage.adminLogs = 1;
-            loadAdminLogs(currentPage.adminLogs);
+    });
+    
+    // Edit user modal events (delegated)
+    document.addEventListener('click', (e) => {
+        if (e.target.id === 'add-coins-btn') {
+            showAddCoinsModal();
+        } else if (e.target.id === 'reset-score-btn') {
+            const userId = e.target.dataset.userId;
+            resetUserScore(userId);
+        } else if (e.target.id === 'ban-btn') {
+            const userId = e.target.dataset.userId;
+            banUser(userId);
+        } else if (e.target.id === 'unban-btn') {
+            const userId = e.target.dataset.userId;
+            unbanUser(userId);
+        } else if (e.target.id === 'delete-user-btn') {
+            const userId = e.target.dataset.userId;
+            deleteUser(userId);
+        } else if (e.target.id === 'save-user-changes') {
+            saveUserChanges();
+        } else if (e.target.id === 'cancel-edit-user') {
+            closeModal('edit-user-modal');
         }
+    });
+    
+    // Add coins modal events
+    document.getElementById('confirm-add-coins')?.addEventListener('click', addCoinsToUser);
+    document.getElementById('cancel-add-coins')?.addEventListener('click', () => closeModal('add-coins-modal'));
+}
 
-         
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Admin panel loaded');
-            initAdminPanel();
-        });
+// Refresh all data
+async function refreshAllData() {
+    showNotification('Refreshing all data...', 'info');
+    
+    try {
+        await loadDashboardStats();
+        await loadUsers(currentPage.users);
+        await loadUserLogs(currentPage.userLogs);
+        await loadAdminLogs(currentPage.adminLogs);
+        await loadTransactions(currentPage.transactions);
+        
+        showNotification('All data refreshed successfully', 'success');
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        showNotification('Failed to refresh data', 'error');
+    }
+}
 
-         
-        window.addEventListener('error', function(event) {
-            console.error('Global error:', event.error);
-            showNotification('An unexpected error occurred', 'error');
-        });
+// Export functions
+function exportUserData() {
+    if (users.length === 0) {
+        showNotification('No users to export', 'warning');
+        return;
+    }
 
-        window.addEventListener('unhandledrejection', function(event) {
-            console.error('Unhandled promise rejection:', event.reason);
-            showNotification('An unexpected error occurred', 'error');
-        });
+    let csvContent = "User ID,Username,First Name,Last Name,Coins,Per Click,Per Second,Status\n";
+    
+    users.forEach(user => {
+        const status = user.is_banned ? "Banned" : "Active";
+        const row = [
+            user.user_id,
+            user.username || '',
+            user.first_name || '',
+            user.last_name || '',
+            new Decimal(user.score || 0).toFixed(9),
+            new Decimal(user.click_value || 0).toFixed(9),
+            new Decimal(user.auto_click_rate || 0).toFixed(9),
+            status
+        ].map(field => `"${field}"`).join(',');
+        csvContent += row + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showNotification('User data exported successfully', 'success');
+}
+
+function exportTransactionData() {
+    if (transactions.length === 0) {
+        showNotification('No transactions to export', 'warning');
+        return;
+    }
+
+    let csvContent = "Transaction ID,Sender ID,Receiver ID,Amount,Date\n";
+    
+    transactions.forEach(tx => {
+        const row = [
+            tx.id || '',
+            tx.sender_id,
+            tx.receiver_id,
+            new Decimal(tx.amount || 0).toFixed(9),
+            formatDateTime(tx.created_at)
+        ].map(field => `"${field}"`).join(',');
+        csvContent += row + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transactions_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    showNotification('Transaction data exported successfully', 'success');
+}
+
+function showBroadcastModal() {
+    document.getElementById('broadcast-modal').classList.add('active');
+}
+
+async function sendBroadcast() {
+    const message = document.getElementById('broadcast-message').value;
+    const type = document.getElementById('broadcast-type').value;
+
+    if (!message.trim()) {
+        showNotification('Please enter a message', 'error');
+        return;
+    }
+
+    showNotification('Sending broadcast...', 'info');
+
+    try {
+        // TODO: Implement actual broadcast API call
+        // For now, simulate success
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
+        
+        closeModal('broadcast-modal');
+        document.getElementById('broadcast-message').value = '';
+        showNotification('Broadcast sent successfully', 'success');
+    } catch (error) {
+        console.error('Error sending broadcast:', error);
+        showNotification(`Broadcast failed: ${error.message}`, 'error');
+    }
+}
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin panel loaded');
+    initAdminPanel();
+});
+
+// Global error handling
+window.addEventListener('error', function(event) {
+    console.error('Global error:', event.error);
+    showNotification('An unexpected error occurred', 'error');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled promise rejection:', event.reason);
+    showNotification('An unexpected error occurred', 'error');
+});
+
+// Make some functions available globally for inline onclick handlers
+window.loadUsers = loadUsers;
+window.loadUserLogs = loadUserLogs;
+window.loadAdminLogs = loadAdminLogs;
+window.loadTransactions = loadTransactions;
+window.refreshAllData = refreshAllData;
