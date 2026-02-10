@@ -538,8 +538,8 @@ function filterTableByAction(tbodyId, actionType) {
 function formatUserInfo(user) {
     if (!user) return '<span style="color: var(--text-dim);">System</span>';
     
-     
-    const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null') ? null : val;
+    // Defensive data extraction
+    const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
     
     const photoUrl = getVal(user.photo_url) || getVal(user.avatar_url) || getVal(user.profile_photo_url);
     const firstName = getVal(user.first_name);
@@ -551,9 +551,15 @@ function formatUserInfo(user) {
     
     const hasFirst = firstName && firstName.trim().length > 0;
     const hasLast = lastName && lastName.trim().length > 0;
-    const displayName = hasFirst
-        ? `${firstName}${hasLast ? ' ' + lastName : ''}`
-        : (usernameRaw || 'Anonymous');
+    
+    let displayName = 'Anonymous';
+    if (hasFirst) {
+        displayName = `${firstName}${hasLast ? ' ' + lastName : ''}`;
+    } else if (usernameRaw) {
+        displayName = usernameRaw;
+    } else if (userIdRaw) {
+        displayName = `User ${String(userIdRaw).substring(0, 8)}`;
+    }
     
     const username = usernameRaw ? `@${usernameRaw}` : '';
     const userId = userIdRaw;
@@ -1199,8 +1205,8 @@ async function loadUserLogs(page = 1) {
             }
         });
 
+        let data;
         if (!response.ok) {
-             
             const fallbackResponse = await fetch(`${BACKEND_URL}/admin/user-logs?page=${page}&limit=${itemsPerPage}`, {
                 method: 'GET',
                 headers: {
@@ -1208,20 +1214,17 @@ async function loadUserLogs(page = 1) {
                     'x-admin-secret': ADMIN_SECRET
                 }
             });
-            
             if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
-            
-            const data = await fallbackResponse.json();
-            userLogs = data.logs || [];
+            data = await fallbackResponse.json();
         } else {
-            const data = await response.json();
-            userLogs = data.logs || [];
+            data = await response.json();
         }
         
+        userLogs = data.logs || [];
         currentPage.userLogs = page;
         
         renderUserLogsTable();
-        renderPagination('user-logs', userLogs.length, page);
+        renderPagination('user-logs', data.totalCount || userLogs.length, page);
 
     } catch (error) {
         console.error('Error loading user logs:', error);
@@ -1282,8 +1285,8 @@ async function loadAdminLogs(page = 1) {
             }
         });
 
+        let data;
         if (!response.ok) {
-             
             const fallbackResponse = await fetch(`${BACKEND_URL}/admin/admin-logs?page=${page}&limit=${itemsPerPage}`, {
                 method: 'GET',
                 headers: {
@@ -1291,20 +1294,17 @@ async function loadAdminLogs(page = 1) {
                     'x-admin-secret': ADMIN_SECRET
                 }
             });
-            
             if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
-            
-            const data = await fallbackResponse.json();
-            adminLogs = data.logs || [];
+            data = await fallbackResponse.json();
         } else {
-            const data = await response.json();
-            adminLogs = data.logs || [];
+            data = await response.json();
         }
         
+        adminLogs = data.logs || [];
         currentPage.adminLogs = page;
         
         renderAdminLogsTable();
-        renderPagination('admin-logs', adminLogs.length, page);
+        renderPagination('admin-logs', data.totalCount || adminLogs.length, page);
 
     } catch (error) {
         console.error('Error loading admin logs:', error);
@@ -1326,28 +1326,34 @@ function renderAdminLogsTable() {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        const adminInfo = formatUserInfo({
-            first_name: log.admin_first_name || (log.admin_id === currentUser?.id ? 'You' : null),
-            username: log.admin_username,
+        // Try to find admin info from various potential field names
+        const adminData = {
+            first_name: log.admin_first_name || log.first_name,
+            username: log.admin_username || log.username,
             user_id: log.admin_id,
-            photo_url: log.admin_photo_url
-        });
+            photo_url: log.admin_photo_url || log.photo_url || log.profile_photo_url
+        };
 
-        const targetInfo = log.target_user_id ? formatUserInfo({
+        const adminInfo = formatUserInfo(adminData);
+
+        // Try to find target info
+        const targetData = log.target_user_id ? {
             first_name: log.target_first_name,
             last_name: log.target_last_name,
             username: log.target_username,
             user_id: log.target_user_id,
             photo_url: log.target_photo_url
-        }) : '<span style="color: var(--text-dim);">System</span>';
+        } : null;
+
+        const targetInfo = targetData ? formatUserInfo(targetData) : '<span style="color: var(--text-dim);">System</span>';
 
         return `
         <tr>
-            <td>${adminInfo}</td>
-            <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td>${targetInfo}</td>
-            <td><div class="details-text" style="max-width: 400px;">${parseDetails(log.details)}</div></td>
-            <td class="timestamp" title="${formatDateTime(log.created_at)}">
+            <td style="vertical-align: top; padding-top: 1rem;">${adminInfo}</td>
+            <td style="vertical-align: top; padding-top: 1.25rem;"><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+            <td style="vertical-align: top; padding-top: 1rem;">${targetInfo}</td>
+            <td style="vertical-align: top; padding-top: 1rem;"><div class="details-text" style="max-width: 400px; font-size: 0.75rem;">${parseDetails(log.details)}</div></td>
+            <td class="timestamp" title="${formatDateTime(log.created_at)}" style="vertical-align: top; padding-top: 1rem;">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
             </td>
@@ -1484,22 +1490,26 @@ function renderPagination(type, totalCount, currentPageNum) {
         return;
     }
     
+    // Convert kebab-case to CamelCase for function names (e.g., user-logs -> UserLogs)
+    const functionSuffix = type.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+    const loadFunctionName = `load${functionSuffix}`;
+    
     let paginationHTML = '<div class="pagination-container" style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1.5rem;">';
     
     if (currentPageNum > 1) {
         paginationHTML += `
-            <button class="btn btn-outline btn-sm" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
+            <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum - 1})">
                 <i class="fas fa-chevron-left"></i>
             </button>
         `;
     }
     
-         for (let i = Math.max(1, currentPageNum - 2); i <= Math.min(totalPages, currentPageNum + 2); i++) {
+    for (let i = Math.max(1, currentPageNum - 2); i <= Math.min(totalPages, currentPageNum + 2); i++) {
         if (i === currentPageNum) {
             paginationHTML += `<button class="btn btn-primary btn-sm">${i}</button>`;
         } else {
             paginationHTML += `
-                <button class="btn btn-outline btn-sm" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">
+                <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${i})">
                     ${i}
                 </button>
             `;
@@ -1508,7 +1518,7 @@ function renderPagination(type, totalCount, currentPageNum) {
     
     if (currentPageNum < totalPages) {
         paginationHTML += `
-            <button class="btn btn-outline btn-sm" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
+            <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum + 1})">
                 <i class="fas fa-chevron-right"></i>
             </button>
         `;
