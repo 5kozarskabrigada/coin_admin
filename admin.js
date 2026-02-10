@@ -941,6 +941,39 @@ async function editUser(userId) {
             </div>
 
             <div style="margin-bottom: 1.5rem;">
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Upgrade Levels</h4>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+                    <div>
+                        <h5 style="font-size: 0.7rem; color: var(--primary); margin-bottom: 0.5rem;">Click Upgrades</h5>
+                        ${[1, 2, 3, 4, 5].map(i => `
+                            <div class="form-group" style="margin-bottom: 0.5rem;">
+                                <label style="font-size: 0.7rem;">Tier ${i}</label>
+                                <input type="number" id="edit-click-tier-${i}" class="form-control upgrade-input" value="${user[`click_tier_${i}_level`] || 0}" min="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div>
+                        <h5 style="font-size: 0.7rem; color: var(--success); margin-bottom: 0.5rem;">Auto Upgrades</h5>
+                        ${[1, 2, 3, 4, 5].map(i => `
+                            <div class="form-group" style="margin-bottom: 0.5rem;">
+                                <label style="font-size: 0.7rem;">Tier ${i}</label>
+                                <input type="number" id="edit-auto-tier-${i}" class="form-control upgrade-input" value="${user[`auto_tier_${i}_level`] || 0}" min="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div>
+                        <h5 style="font-size: 0.7rem; color: var(--warning); margin-bottom: 0.5rem;">Offline Upgrades</h5>
+                        ${[1, 2, 3, 4, 5].map(i => `
+                            <div class="form-group" style="margin-bottom: 0.5rem;">
+                                <label style="font-size: 0.7rem;">Tier ${i}</label>
+                                <input type="number" id="edit-offline-tier-${i}" class="form-control upgrade-input" value="${user[`offline_tier_${i}_level`] || 0}" min="0">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
                 <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Quick Actions</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                     <button class="btn btn-outline" id="add-coins-btn">
@@ -1277,17 +1310,26 @@ async function saveUserChanges() {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
 
+        const updates = {
+            score: new Decimal(score).toFixed(9),
+            click_value: new Decimal(clickValue).toFixed(9),
+            auto_click_rate: new Decimal(autoClickRate).toFixed(9)
+        };
+
+        // Add upgrade levels
+        for (let i = 1; i <= 5; i++) {
+            updates[`click_tier_${i}_level`] = parseInt(document.getElementById(`edit-click-tier-${i}`).value) || 0;
+            updates[`auto_tier_${i}_level`] = parseInt(document.getElementById(`edit-auto-tier-${i}`).value) || 0;
+            updates[`offline_tier_${i}_level`] = parseInt(document.getElementById(`edit-offline-tier-${i}`).value) || 0;
+        }
+
         const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-admin-secret': ADMIN_SECRET
             },
-            body: JSON.stringify({
-                score: new Decimal(score).toFixed(9),
-                click_value: new Decimal(clickValue).toFixed(9),
-                auto_click_rate: new Decimal(autoClickRate).toFixed(9)
-            })
+            body: JSON.stringify(updates)
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -1475,6 +1517,8 @@ function setupAdvancedSearch(sectionId) {
                             renderSuggestions(users, sectionId);
                         }, 300);
                     } else {
+                        // Show recent or random users if empty? For now just hide or show nothing
+                        // Maybe fetch recent users?
                         hideSuggestions(sectionId);
                     }
                 } else {
@@ -1486,7 +1530,7 @@ function setupAdvancedSearch(sectionId) {
         } else if (value.trim().length > 0) {
             const staticItems = getStaticSuggestions(lastWord);
             
-            if (lastWord.length >= 2) {
+            if (lastWord.length >= 1) {
                 if (staticItems.length > 0) renderSuggestions(staticItems, sectionId);
                 
                 autocompleteTimer = setTimeout(async () => {
@@ -1875,7 +1919,19 @@ async function enableMaintenanceMode() {
     try {
         showNotification('Enabling maintenance mode...', 'info');
 
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const response = await fetch(`${BACKEND_URL}/admin/maintenance-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            },
+            body: JSON.stringify({
+                maintenance_mode: true,
+                message: message
+            })
+        });
+
+        if (!response.ok) throw new Error('Failed to update maintenance status');
 
         maintenanceMode = true;
         localStorage.setItem('sisi_maintenance_mode', 'true');
@@ -1883,7 +1939,7 @@ async function enableMaintenanceMode() {
         showNotification('Maintenance mode enabled', 'success');
         closeModal('maintenance-modal');
         updateMaintenanceUI();
-        await logAdminAction('enable_maintenance', null, `Maintenance enabled: ${message.substring(0, 50)}...`);
+        await logAdminAction('enable_maintenance', null, `Maintenance enabled: ${message}`);
 
     } catch (error) {
         console.error('Error enabling maintenance mode:', error);
@@ -1895,7 +1951,18 @@ async function disableMaintenanceMode() {
     try {
         showNotification('Disabling maintenance mode...', 'info');
 
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        const response = await fetch(`${BACKEND_URL}/admin/maintenance-status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            },
+            body: JSON.stringify({
+                maintenance_mode: false
+            })
+        });
+
+        if (!response.ok) throw new Error('Failed to update maintenance status');
 
         maintenanceMode = false;
         localStorage.setItem('sisi_maintenance_mode', 'false');
@@ -2330,30 +2397,43 @@ function updateCoinsCalculation() {
     }
 }
 
-async function sendBroadcast() {
-    const message = document.getElementById('broadcast-message').value;
-    const type = document.getElementById('broadcast-type').value;
+    async function sendBroadcast() {
+        const message = document.getElementById('broadcast-message').value;
+        const type = document.getElementById('broadcast-type').value;
 
-    if (!message.trim()) {
-        showNotification('Please enter a message', 'error');
-        return;
+        if (!message.trim()) {
+            showNotification('Please enter a message', 'error');
+            return;
+        }
+
+        showNotification('Sending broadcast...', 'info');
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/broadcast`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-admin-secret': ADMIN_SECRET
+                },
+                body: JSON.stringify({
+                    message: message,
+                    type: type,
+                    is_active: true
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to send broadcast');
+
+            await logAdminAction('send_broadcast', null, `Broadcast sent: ${message}`);
+            
+            closeModal('broadcast-modal');
+            document.getElementById('broadcast-message').value = '';
+            showNotification('Broadcast sent successfully', 'success');
+        } catch (error) {
+            console.error('Error sending broadcast:', error);
+            showNotification(`Broadcast failed: ${error.message}`, 'error');
+        }
     }
-
-    showNotification('Sending broadcast...', 'info');
-
-    try {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        await logAdminAction('send_broadcast', null, `Broadcast sent: ${message.substring(0, 50)}...`);
-        
-        closeModal('broadcast-modal');
-        document.getElementById('broadcast-message').value = '';
-        showNotification('Broadcast sent successfully', 'success');
-    } catch (error) {
-        console.error('Error sending broadcast:', error);
-        showNotification(`Broadcast failed: ${error.message}`, 'error');
-    }
-}
 
 function toggleQuickSearch(show) {
     const overlay = document.getElementById('quick-search-overlay');
