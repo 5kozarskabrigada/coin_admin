@@ -185,6 +185,8 @@ async function initAdminPanel() {
         
         setupEventListeners();
         setupSearchListeners();
+        setupAdvancedSearch('userLogs');
+        setupAdvancedSearch('adminLogs');
         
         await checkMaintenanceMode();
         
@@ -1284,61 +1286,204 @@ function renderTransactionsTable(searchTerm = '') {
     }).join('');
 }
 
+let searchChips = {
+    userLogs: [],
+    adminLogs: []
+};
+
+function setupAdvancedSearch(sectionId) {
+    const isUIAdmin = sectionId === 'adminLogs';
+    const input = document.getElementById(`unified-search-input${isUIAdmin ? '-admin' : ''}`);
+    const bar = document.getElementById(`unified-search-bar${isUIAdmin ? '-admin' : ''}`);
+    const chipsContainer = document.getElementById(`search-chips${isUIAdmin ? '-admin' : ''}`);
+    const suggestionsContainer = document.getElementById(`search-suggestions${isUIAdmin ? '-admin' : ''}`);
+
+    if (!input || !bar) return;
+
+    const filterKeys = isUIAdmin 
+        ? ['admin:', 'target:', 'action:', 'date:', 'before:', 'after:']
+        : ['user:', 'action:', 'date:', 'before:', 'after:'];
+
+    const actionValues = isUIAdmin
+        ? ['update_user', 'ban_user', 'unban_user', 'add_coins', 'reset_score', 'delete_user', 'send_broadcast', 'enable_maintenance', 'disable_maintenance']
+        : ['login', 'click', 'upgrade_purchase', 'solo_lottery_win', 'coin_transfer', 'coin_received'];
+
+    let selectedSuggestionIndex = -1;
+
+    bar.addEventListener('click', () => input.focus());
+
+    input.addEventListener('input', (e) => {
+        const value = e.target.value;
+        const lastWord = value.split(' ').pop();
+        
+        if (lastWord.includes(':')) {
+            const [key, val] = lastWord.split(':');
+            if (filterKeys.includes(key + ':')) {
+                showSuggestions(key + ':', val, sectionId);
+            } else {
+                hideSuggestions(sectionId);
+            }
+        } else if (value.trim().length > 0) {
+            showSuggestions('', lastWord, sectionId);
+        } else {
+            hideSuggestions(sectionId);
+        }
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+            updateSelectedSuggestion(suggestions);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+            updateSelectedSuggestion(suggestions);
+        } else if (e.key === 'Enter') {
+            if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+                e.preventDefault();
+                suggestions[selectedSuggestionIndex].click();
+            } else {
+                if (sectionId === 'userLogs') loadUserLogs(1);
+                else if (sectionId === 'adminLogs') loadAdminLogs(1);
+            }
+        } else if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId].length > 0) {
+            removeChip(searchChips[sectionId].length - 1, sectionId);
+        }
+    });
+
+    function showSuggestions(activeKey, activeValue, sectionId) {
+        let items = [];
+        if (activeKey === '') {
+            items = filterKeys.filter(k => k.startsWith(activeValue)).map(k => ({ label: k, value: k, icon: 'filter', hint: 'Filter' }));
+        } else if (activeKey === 'action:') {
+            items = actionValues.filter(v => v.startsWith(activeValue)).map(v => ({ label: v, value: activeKey + v, icon: 'tag', hint: 'Action' }));
+        } else if (['date:', 'before:', 'after:'].includes(activeKey)) {
+            items = [
+                { label: 'Today', value: activeKey + new Date().toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' },
+                { label: 'Yesterday', value: activeKey + new Date(Date.now() - 86400000).toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' }
+            ];
+            
+            if (!input._flatpickr) {
+                flatpickr(input, {
+                    onChange: (selectedDates, dateStr) => {
+                        addChip(activeKey, dateStr, sectionId);
+                        input.value = '';
+                        input._flatpickr.destroy();
+                        input._flatpickr = null;
+                    }
+                }).open();
+            }
+        }
+
+        if (items.length > 0) {
+            suggestionsContainer.innerHTML = items.map((item, index) => `
+                <div class="suggestion-item" data-value="${item.value}">
+                    <i class="fas fa-${item.icon}"></i>
+                    <span class="suggestion-label">${item.label}</span>
+                    <span class="suggestion-hint">${item.hint}</span>
+                </div>
+            `).join('');
+            
+            suggestionsContainer.classList.add('active');
+            
+            suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const val = item.getAttribute('data-value');
+                    if (val.endsWith(':')) {
+                        input.value = val;
+                        input.focus();
+                    } else {
+                        const [k, v] = val.split(':');
+                        addChip(k + ':', v, sectionId);
+                        input.value = '';
+                    }
+                    hideSuggestions(sectionId);
+                });
+            });
+        } else {
+            hideSuggestions(sectionId);
+        }
+    }
+
+    function hideSuggestions(sectionId) {
+        suggestionsContainer.classList.remove('active');
+        selectedSuggestionIndex = -1;
+    }
+
+    function updateSelectedSuggestion(suggestions) {
+        suggestions.forEach((s, i) => {
+            if (i === selectedSuggestionIndex) {
+                s.classList.add('selected');
+                s.scrollIntoView({ block: 'nearest' });
+            } else {
+                s.classList.remove('selected');
+            }
+        });
+    }
+
+    function addChip(key, value, sectionId) {
+        searchChips[sectionId].push({ key, value });
+        renderChips(sectionId);
+        if (sectionId === 'userLogs') loadUserLogs(1);
+        else if (sectionId === 'adminLogs') loadAdminLogs(1);
+    }
+
+    function removeChip(index, sectionId) {
+        searchChips[sectionId].splice(index, 1);
+        renderChips(sectionId);
+        if (sectionId === 'userLogs') loadUserLogs(1);
+        else if (sectionId === 'adminLogs') loadAdminLogs(1);
+    }
+
+    function renderChips(sectionId) {
+        chipsContainer.innerHTML = searchChips[sectionId].map((chip, index) => `
+            <div class="search-chip">
+                <span class="chip-key">${chip.key}</span>
+                <span class="chip-value">${chip.value}</span>
+                <i class="fas fa-times chip-remove" onclick="removeChip(${index}, '${sectionId}')"></i>
+            </div>
+        `).join('');
+    }
+
+    window.removeChip = removeChip;
+}
+
 async function loadUserLogs(page = 1) {
     if (!currentUser) return;
 
-    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('user-logs-search')?.value || '';
-    const actionFilter = document.getElementById('user-logs-action-filter')?.value || '';
+    const input = document.getElementById('unified-search-input');
+    const freeText = input?.value || '';
+    const filters = searchChips.userLogs;
     const tbody = document.getElementById('user-logs-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = renderSkeletonRows(4, 10);
+    tbody.innerHTML = renderSkeletonRows(4, 15);
 
     try {
         const url = new URL(`${BACKEND_URL}/admin/enhanced-user-logs`);
         url.searchParams.set('page', page);
-        url.searchParams.set('limit', itemsPerPage);
-        if (searchTerm) url.searchParams.set('search', searchTerm);
-        if (actionFilter) url.searchParams.set('action_type', actionFilter);
+        url.searchParams.set('limit', 15);
+        url.searchParams.set('search', JSON.stringify({ freeText, filters }));
 
         const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
-            }
+            headers: { 'x-admin-secret': ADMIN_SECRET }
         });
 
-        let data;
-        if (!response.ok) {
-            const fallbackUrl = new URL(`${BACKEND_URL}/admin/user-logs`);
-            fallbackUrl.searchParams.set('page', page);
-            fallbackUrl.searchParams.set('limit', itemsPerPage);
-            if (searchTerm) fallbackUrl.searchParams.set('search', searchTerm);
-            
-            const fallbackResponse = await fetch(fallbackUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-secret': ADMIN_SECRET
-                }
-            });
-            if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
-            data = await fallbackResponse.json();
-        } else {
-            data = await response.json();
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
         
         userLogs = data.logs || [];
         currentPage.userLogs = page;
         
-        renderUserLogsTable(searchTerm);
-        renderPagination('user-logs', data.totalCount || userLogs.length, page);
+        renderUserLogsTable(freeText);
+        renderPagination('user-logs', data.totalCount || 0, page);
 
     } catch (error) {
         console.error('Error loading user logs:', error);
         tbody.innerHTML = `<tr><td colspan="4" class="error">Error: ${error.message}</td></tr>`;
-        showNotification('Failed to load user logs', 'error');
     }
 }
 
@@ -1380,58 +1525,36 @@ function renderUserLogsTable(searchTerm = '') {
 async function loadAdminLogs(page = 1) {
     if (!currentUser) return;
 
-    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('admin-logs-search')?.value || '';
-    const actionFilter = document.getElementById('admin-logs-action-filter')?.value || '';
+    const input = document.getElementById('unified-search-input-admin');
+    const freeText = input?.value || '';
+    const filters = searchChips.adminLogs;
     const tbody = document.getElementById('admin-logs-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = renderSkeletonRows(5, 10);
+    tbody.innerHTML = renderSkeletonRows(5, 15);
 
     try {
         const url = new URL(`${BACKEND_URL}/admin/enhanced-admin-logs`);
         url.searchParams.set('page', page);
-        url.searchParams.set('limit', itemsPerPage);
-        if (searchTerm) url.searchParams.set('search', searchTerm);
-        if (actionFilter) url.searchParams.set('action_type', actionFilter);
+        url.searchParams.set('limit', 15);
+        url.searchParams.set('search', JSON.stringify({ freeText, filters }));
 
         const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
-            }
+            headers: { 'x-admin-secret': ADMIN_SECRET }
         });
 
-        let data;
-        if (!response.ok) {
-            const fallbackUrl = new URL(`${BACKEND_URL}/admin/admin-logs`);
-            fallbackUrl.searchParams.set('page', page);
-            fallbackUrl.searchParams.set('limit', itemsPerPage);
-            if (searchTerm) fallbackUrl.searchParams.set('search', searchTerm);
-
-            const fallbackResponse = await fetch(fallbackUrl, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-admin-secret': ADMIN_SECRET
-                }
-            });
-            if (!fallbackResponse.ok) throw new Error(`HTTP ${fallbackResponse.status}`);
-            data = await fallbackResponse.json();
-        } else {
-            data = await response.json();
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
         
         adminLogs = data.logs || [];
         currentPage.adminLogs = page;
         
-        renderAdminLogsTable(searchTerm);
-        renderPagination('admin-logs', data.totalCount || adminLogs.length, page);
+        renderAdminLogsTable(freeText);
+        renderPagination('admin-logs', data.totalCount || 0, page);
 
     } catch (error) {
         console.error('Error loading admin logs:', error);
         tbody.innerHTML = `<tr><td colspan="5" class="error">Error: ${error.message}</td></tr>`;
-        showNotification('Failed to load admin logs', 'error');
     }
 }
 

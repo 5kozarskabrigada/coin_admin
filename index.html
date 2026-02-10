@@ -14,6 +14,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     
     <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 </head>
 <body>
      
@@ -325,24 +327,19 @@
                 <div id="user-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">User Activity Logs</h1>
-                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end;">
-                            <div class="form-group" style="flex: 1;">
-                                <label><i class="fas fa-search"></i> Search Logs</label>
-                                <input type="text" id="user-logs-search" class="form-control" placeholder="Search by name, ID, or detail...">
-                            </div>
-                            <div class="form-group" style="width: 200px;">
-                                <label><i class="fas fa-filter"></i> Action Type</label>
-                                <select id="user-logs-action-filter" class="form-control">
-                                    <option value="">All Actions</option>
-                                    <option value="login">Login</option>
-                                    <option value="click">Click</option>
-                                    <option value="upgrade">Upgrades</option>
-                                    <option value="lottery_win">Lottery Wins</option>
-                                    <option value="transfer">Transfers</option>
-                                </select>
-                            </div>
+                    </div>
+
+                    <div class="unified-search-container">
+                        <div class="unified-search-bar" id="unified-search-bar">
+                            <div id="search-chips" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+                            <input type="text" id="unified-search-input" placeholder="Search logs... (e.g. user:John action:login)" autocomplete="off">
+                        </div>
+                        <div id="search-suggestions" class="search-suggestions"></div>
+                        <div class="search-tip">
+                            Tip: Use <kbd>user:</kbd>, <kbd>action:</kbd>, <kbd>date:</kbd>, <kbd>before:</kbd>, <kbd>after:</kbd> to filter results.
                         </div>
                     </div>
+
                     <div class="content-card">
                         <div class="table-responsive">
                             <table class="data-table">
@@ -367,23 +364,19 @@
                 <div id="admin-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">Admin Activity Logs</h1>
-                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end;">
-                            <div class="form-group" style="flex: 1;">
-                                <label><i class="fas fa-search"></i> Search Admin Logs</label>
-                                <input type="text" id="admin-logs-search" class="form-control" placeholder="Search actor, target, or details...">
-                            </div>
-                            <div class="form-group" style="width: 200px;">
-                                <label><i class="fas fa-filter"></i> Action Type</label>
-                                <select id="admin-logs-action-filter" class="form-control">
-                                    <option value="">All Actions</option>
-                                    <option value="update_user">Update User</option>
-                                    <option value="ban_user">Ban/Unban</option>
-                                    <option value="maintenance">Maintenance</option>
-                                    <option value="config_change">Config Changes</option>
-                                </select>
-                            </div>
+                    </div>
+
+                    <div class="unified-search-container">
+                        <div class="unified-search-bar" id="unified-search-bar-admin">
+                            <div id="search-chips-admin" style="display: flex; gap: 0.5rem; flex-wrap: wrap;"></div>
+                            <input type="text" id="unified-search-input-admin" placeholder="Search admin logs... (e.g. admin:John action:ban)" autocomplete="off">
+                        </div>
+                        <div id="search-suggestions-admin" class="search-suggestions"></div>
+                        <div class="search-tip">
+                            Tip: Use <kbd>admin:</kbd>, <kbd>target:</kbd>, <kbd>action:</kbd>, <kbd>date:</kbd> to filter results.
                         </div>
                     </div>
+
                     <div class="content-card">
                         <div class="table-responsive">
                             <table class="data-table">
@@ -534,6 +527,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="admin.js"></script>
 </body>
 </html>

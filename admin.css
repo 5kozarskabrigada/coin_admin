@@ -624,6 +624,146 @@ kbd {
     box-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
+/* Advanced Search System */
+.unified-search-container {
+    position: relative;
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.unified-search-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--bg-darker);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    min-height: 48px;
+    cursor: text;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.unified-search-bar:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.search-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    user-select: none;
+}
+
+.search-chip .chip-key {
+    color: var(--text-dim);
+    font-weight: 600;
+}
+
+.search-chip .chip-remove {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    padding: 2px;
+}
+
+.search-chip .chip-remove:hover {
+    color: var(--danger);
+}
+
+#unified-search-input {
+    flex: 1;
+    min-width: 120px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    padding: 4px 0;
+}
+
+.search-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+}
+
+.search-suggestions.active {
+    display: block;
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: background 0.2s;
+}
+
+.suggestion-item:hover, .suggestion-item.selected {
+    background: var(--primary-light);
+}
+
+.suggestion-item i {
+    color: var(--text-dim);
+    width: 16px;
+    text-align: center;
+}
+
+.suggestion-item .suggestion-label {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.suggestion-item .suggestion-hint {
+    color: var(--text-dim);
+    font-size: 0.75rem;
+}
+
+.search-tip {
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+}
+
+.search-tip kbd {
+    background: var(--bg-darker);
+    border: 1px solid var(--border-light);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
+/* Date Picker Integration */
+.flatpickr-calendar {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border-light) !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3) !important;
+}
+
+.flatpickr-day.selected {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+}
+
 /* Modals */
  
 .modal {
