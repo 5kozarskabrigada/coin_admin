@@ -1,23 +1,4 @@
 {
     "version": 2,
-    "cleanUrls": true,
-    "trailingSlash": false,
-    "routes": [
-        {
-            "src": "/admin.css",
-            "dest": "/admin.css"
-        },
-        {
-            "src": "/admin.js",
-            "dest": "/admin.js"
-        },
-        {
-            "src": "/styles.css",
-            "dest": "/styles.css"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/index.html"
-        }
-    ]
+    "cleanUrls": true
 }
