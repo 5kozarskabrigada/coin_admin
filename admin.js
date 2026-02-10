@@ -414,21 +414,18 @@ function debounce(func, wait) {
 
 async function handleGlobalSearch(query) {
     if (!query || query.length < 2) {
-        // If query is cleared, refresh the current section
-        const hash = window.location.hash.split('?')[0].replace('#', '') || 'dashboard';
+                const hash = window.location.hash.split('?')[0].replace('#', '') || 'dashboard';
         showSection(hash, false);
         return;
     }
 
     showNotification(`Searching for "${query}"...`, 'info');
 
-    // Based on the current active section, apply filtering or call specific search
-    const activeSection = document.querySelector('.section.active')?.id;
+        const activeSection = document.querySelector('.section.active')?.id;
     
     switch (activeSection) {
         case 'users':
-            loadUsers(1); // loadUsers already uses the search input value
-            break;
+            loadUsers(1);             break;
         case 'transactions':
             loadTransactions(1);
             break;
@@ -439,8 +436,7 @@ async function handleGlobalSearch(query) {
             loadAdminLogs(1);
             break;
         default:
-            // If on dashboard, maybe just search users as default
-            showSection('users');
+                        showSection('users');
             break;
     }
 }
@@ -583,8 +579,7 @@ function filterTableByAction(tbodyId, actionType) {
 function formatUserInfo(user) {
     if (!user) return '<span style="color: var(--text-dim);">System</span>';
     
-    // Defensive data extraction
-    const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
+        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
     
     const photoUrl = getVal(user.photo_url) || getVal(user.avatar_url) || getVal(user.profile_photo_url);
     const firstName = getVal(user.first_name);
@@ -642,8 +637,7 @@ function renderRecentActivity(logs) {
     }
 
     tbody.innerHTML = logs.slice(0, 10).map(log => {
-        // Robust action type detection
-        let actionType = log.action_type;
+                let actionType = log.action_type;
         if (!actionType && log.details) {
             if (log.details.toLowerCase().includes('maintenance')) {
                 actionType = log.details.toLowerCase().includes('enable') ? 'enable_maintenance' : 'disable_maintenance';
@@ -655,8 +649,7 @@ function renderRecentActivity(logs) {
         const action = actionTypeMap[actionType] || { name: actionType || 'System Action', color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
-        // Defensive data extraction
-        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
+                const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
 
         const userData = {
             first_name: getVal(log.first_name) || getVal(log.admin_first_name),
@@ -1144,8 +1137,7 @@ async function saveUserChanges() {
         return;
     }
 
-    // Client-side validation
-    try {
+        try {
         const scoreVal = new Decimal(score);
         const clickVal = new Decimal(clickValue);
         const autoVal = new Decimal(autoClickRate);
@@ -1185,8 +1177,7 @@ async function saveUserChanges() {
 
         const updatedUser = await response.json();
         
-        // Update local cache
-        const userIndex = users.findIndex(u => u.user_id == currentEditingUserId);
+                const userIndex = users.findIndex(u => u.user_id == currentEditingUserId);
         if (userIndex !== -1 && updatedUser.user) {
             users[userIndex] = updatedUser.user;
         }
@@ -1457,17 +1448,15 @@ function renderAdminLogsTable(searchTerm = '') {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        // Actor info
-        const adminData = {
-            first_name: log.admin_first_name || log.first_name,
-            username: log.admin_username || log.username,
+                const adminData = {
+            first_name: log.admin_first_name || 'System',
+            username: log.admin_username,
             user_id: log.admin_id,
-            photo_url: log.admin_photo_url || log.photo_url || log.profile_photo_url
+            photo_url: log.admin_photo_url
         };
         const adminInfo = formatUserInfo(adminData);
 
-        // Target info
-        const targetData = log.target_user_id ? {
+                const targetData = log.target_user_id ? {
             first_name: log.target_first_name,
             last_name: log.target_last_name,
             username: log.target_username,
@@ -1621,27 +1610,23 @@ function renderPagination(type, totalCount, currentPageNum) {
         return;
     }
     
-    // Update URL hash for shareability
-    const hash = window.location.hash.split('?')[0];
+        const hash = window.location.hash.split('?')[0];
     const params = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
     params.set(`${type}_page`, currentPageNum);
     window.location.hash = `${hash.replace('#', '')}?${params.toString()}`;
     
-    // Convert kebab-case to CamelCase for function names
-    const functionSuffix = type.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+        const functionSuffix = type.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
     const loadFunctionName = `load${functionSuffix}`;
     
     let paginationHTML = '<div class="pagination-container" style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1.5rem;">';
     
-    // Prev button
-    paginationHTML += `
+        paginationHTML += `
         <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum - 1})" ${currentPageNum <= 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
             <i class="fas fa-chevron-left"></i> Prev
         </button>
     `;
     
-    // Numbered links
-    const startPage = Math.max(1, currentPageNum - 2);
+        const startPage = Math.max(1, currentPageNum - 2);
     const endPage = Math.min(totalPages, currentPageNum + 2);
     
     if (startPage > 1) {
@@ -1666,8 +1651,7 @@ function renderPagination(type, totalCount, currentPageNum) {
         paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${totalPages})">${totalPages}</button>`;
     }
     
-    // Next button
-    paginationHTML += `
+        paginationHTML += `
         <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum + 1})" ${currentPageNum >= totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
             Next <i class="fas fa-chevron-right"></i>
         </button>
@@ -1701,14 +1685,30 @@ function debounceSearch() {
     }, 500);
 }
 
+let quickSearchResults = [];
+let selectedSearchIndex = -1;
+
 function setupEventListeners() {
-    // Global Search (Ctrl+K)
-    document.addEventListener('keydown', (e) => {
+        document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'k') {
             e.preventDefault();
-            document.getElementById('global-search')?.focus();
+            toggleQuickSearch(true);
+        } else if (e.key === 'Escape') {
+            toggleQuickSearch(false);
+        } else if (document.getElementById('quick-search-overlay').classList.contains('active')) {
+            handleQuickSearchKeydown(e);
         }
     });
+
+    document.getElementById('quick-search-overlay')?.addEventListener('click', (e) => {
+        if (e.target === document.getElementById('quick-search-overlay')) {
+            toggleQuickSearch(false);
+        }
+    });
+
+    document.getElementById('quick-search-input')?.addEventListener('input', debounce((e) => {
+        handleQuickSearch(e.target.value);
+    }, 200));
 
     document.getElementById('global-search')?.addEventListener('input', debounce((e) => {
         handleGlobalSearch(e.target.value);
@@ -2020,6 +2020,108 @@ async function sendBroadcast() {
 }
 
  
+function toggleQuickSearch(show) {
+    const overlay = document.getElementById('quick-search-overlay');
+    const input = document.getElementById('quick-search-input');
+    
+    if (show) {
+        overlay.classList.add('active');
+        input.value = '';
+        input.focus();
+        renderQuickSearchResults([]);
+    } else {
+        overlay.classList.remove('active');
+    }
+}
+
+async function handleQuickSearch(query) {
+    if (!query || query.length < 2) {
+        renderQuickSearchResults([]);
+        return;
+    }
+
+    try {
+                const userResp = await fetch(`${BACKEND_URL}/admin/users?search=${encodeURIComponent(query)}&limit=5`, {
+            headers: { 'x-admin-secret': ADMIN_SECRET }
+        });
+        const userData = await userResp.json();
+        
+        const results = [
+            ...(userData.users || []).map(u => ({
+                type: 'USER',
+                id: u.user_id,
+                title: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || 'Anonymous',
+                subtitle: `@${u.username || 'no_username'} • ID: ${u.user_id}`,
+                icon: 'user',
+                action: () => {
+                    showSection('users');
+                    setTimeout(() => editUser(u.user_id), 100);
+                }
+            }))
+        ];
+
+        quickSearchResults = results;
+        selectedSearchIndex = results.length > 0 ? 0 : -1;
+        renderQuickSearchResults(results);
+
+    } catch (error) {
+        console.error('Quick search error:', error);
+    }
+}
+
+function handleQuickSearchKeydown(e) {
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedSearchIndex = Math.min(selectedSearchIndex + 1, quickSearchResults.length - 1);
+        updateSelectedSearchResult();
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedSearchIndex = Math.max(selectedSearchIndex - 1, 0);
+        updateSelectedSearchResult();
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedSearchIndex >= 0 && quickSearchResults[selectedSearchIndex]) {
+            quickSearchResults[selectedSearchIndex].action();
+            toggleQuickSearch(false);
+        }
+    }
+}
+
+function updateSelectedSearchResult() {
+    const items = document.querySelectorAll('.quick-search-item');
+    items.forEach((item, index) => {
+        if (index === selectedSearchIndex) {
+            item.classList.add('selected');
+            item.scrollIntoView({ block: 'nearest' });
+        } else {
+            item.classList.remove('selected');
+        }
+    });
+}
+
+function renderQuickSearchResults(results) {
+    const container = document.getElementById('quick-search-results');
+    if (!container) return;
+
+    if (results.length === 0) {
+        container.innerHTML = '<div class="quick-search-empty">No results found for your query.</div>';
+        return;
+    }
+
+    container.innerHTML = results.map((res, index) => `
+        <div class="quick-search-item ${index === selectedSearchIndex ? 'selected' : ''}" onclick="quickSearchResults[${index}].action(); toggleQuickSearch(false);">
+            <div class="quick-search-icon">
+                <i class="fas fa-${res.icon}"></i>
+            </div>
+            <div class="quick-search-content">
+                <div class="quick-search-title">${escapeHtml(res.title)}</div>
+                <div class="quick-search-subtitle">${escapeHtml(res.subtitle)}</div>
+            </div>
+            <div class="quick-search-type">${res.type}</div>
+        </div>
+    `).join('');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin panel loaded');
     initAdminPanel();

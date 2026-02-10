@@ -82,7 +82,7 @@
             </nav>
             
             <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
-                <!-- Global Search -->
+                
                 <div class="global-search-container" style="position: relative;">
                     <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.875rem;"></i>
                     <input type="text" id="global-search" class="form-control" placeholder="Search... (Ctrl+K)" style="padding-left: 35px; width: 250px; background: var(--bg-darker); border-color: var(--border-light); font-size: 0.875rem;">
@@ -408,7 +408,26 @@
         </main>
     </section>
 
-     
+    
+    <div id="quick-search-overlay" class="overlay">
+        <div class="quick-search-container">
+            <div class="quick-search-header">
+                <i class="fas fa-search"></i>
+                <input type="text" id="quick-search-input" placeholder="Search users, transactions, or logs..." autocomplete="off">
+                <span class="quick-search-hint">ESC to close</span>
+            </div>
+            <div id="quick-search-results" class="quick-search-results">
+                <div class="quick-search-empty">Type to start searching...</div>
+            </div>
+            <div class="quick-search-footer">
+                <div class="footer-item"><kbd>↑↓</kbd> to navigate</div>
+                <div class="footer-item"><kbd>↵</kbd> to select</div>
+                <div class="footer-item"><kbd>ESC</kbd> to dismiss</div>
+            </div>
+        </div>
+    </div>
+
+    
     <div id="edit-user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
