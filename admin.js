@@ -93,28 +93,38 @@ function formatDateTime(dateString) {
 }
 
 function showNotification(message, type = 'info') {
-     
-    document.querySelectorAll('.notification').forEach(n => n.remove());
+         document.querySelectorAll('.notification').forEach(n => n.remove());
     
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    
+    const icon = type === 'success' ? 'check-circle' : 
+                 type === 'error' ? 'exclamation-circle' : 
+                 type === 'warning' ? 'exclamation-triangle' : 'info-circle';
+                 
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-        <span>${message}</span>
+        <div class="notification-icon">
+            <i class="fas fa-${icon}"></i>
+        </div>
+        <div class="notification-content">
+            <span class="notification-message">${message}</span>
+        </div>
     `;
     
     document.body.appendChild(notification);
     
-    setTimeout(() => {
+         setTimeout(() => {
         if (notification.parentNode) {
-            notification.style.animation = 'slideInRight 0.3s ease reverse';
+            notification.style.opacity = '0';
+            notification.style.transform = 'translateX(20px)';
+            notification.style.transition = 'all 0.3s ease';
             setTimeout(() => {
                 if (notification.parentNode) {
                     document.body.removeChild(notification);
                 }
             }, 300);
         }
-    }, 3000);
+    }, 4000);
 }
 
 function parseDetails(details) {
@@ -515,7 +525,7 @@ function renderRecentActivity(logs) {
     if (!tbody) return;
 
     if (!logs || logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No recent activity</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No recent activity found</td></tr>';
         return;
     }
 
@@ -526,22 +536,23 @@ function renderRecentActivity(logs) {
         return `
             <tr>
                 <td class="timestamp" title="${formatDateTime(log.created_at || log.time)}">
-                    ${formatTimeAgo(log.created_at || log.time)}
+                    <div style="font-weight: 500; color: var(--text-primary);">${formatTimeAgo(log.created_at || log.time)}</div>
+                    <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at || log.time)}</div>
                 </td>
                 <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
                 <td>
                     <div class="user-cell">
-                        <div class="user-avatar">
+                        <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">
                             ${(log.username || '?').charAt(0).toUpperCase()}
                         </div>
                         <div class="user-details">
-                            <div class="user-name">${log.username || 'System'}</div>
-                            <div class="user-username">${log.user_id || 'System'}</div>
+                            <div class="user-name" style="font-size: 0.875rem;">${log.username || 'System'}</div>
+                            <div class="user-username" style="font-size: 0.7rem;">${log.user_id ? String(log.user_id).substring(0, 8) : 'System'}</div>
                         </div>
                     </div>
                 </td>
-                <td class="details-text">${log.details || ''}</td>
-                <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}">${log.source || 'USER'}</span></td>
+                <td><div class="details-text" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${log.details || '-'}</div></td>
+                <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}" style="opacity: 0.8;">${log.source || 'USER'}</span></td>
             </tr>
         `;
     }).join('');
@@ -594,7 +605,7 @@ function renderUsersTable() {
     if (!tbody) return;
 
     if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">No users found</td></tr>';
         return;
     }
 
@@ -623,7 +634,7 @@ function renderUsersTable() {
             </div>
         `;
 
-        let statusHtml = '';
+        let statusHtml = '<div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">';
         if (user.is_banned === true) {
             statusHtml += '<span class="action-badge danger">BANNED</span>';
         } else {
@@ -631,21 +642,22 @@ function renderUsersTable() {
         }
 
         if (user.is_admin === true) {
-            statusHtml += '<span class="action-badge primary ml-1">ADMIN</span>';
+            statusHtml += '<span class="action-badge primary">ADMIN</span>';
         }
+        statusHtml += '</div>';
 
         return `
         <tr>
             <td>${userCell}</td>
-            <td><strong>${new Decimal(user.score || 0).toFixed(9)}</strong></td>
-            <td>${new Decimal(user.click_value || 0).toFixed(9)}</td>
-            <td>${new Decimal(user.auto_click_rate || 0).toFixed(9)}</td>
+            <td><div style="font-weight: 700; color: var(--primary); font-family: monospace;">${new Decimal(user.score || 0).toFixed(4)}</div></td>
+            <td><div style="font-size: 0.8rem;">${new Decimal(user.click_value || 0).toFixed(6)}</div></td>
+            <td><div style="font-size: 0.8rem;">${new Decimal(user.auto_click_rate || 0).toFixed(6)}</div></td>
             <td class="timestamp" title="${user.last_updated ? formatDateTime(user.last_updated) : 'Never'}">
-                ${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}
+                <div style="font-size: 0.85rem;">${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}</div>
             </td>
             <td>${statusHtml}</td>
             <td>
-                <button class="btn btn-primary btn-sm edit-user-btn" data-user-id="${user.user_id}">
+                <button class="btn btn-outline btn-sm edit-user-btn" data-user-id="${user.user_id}">
                     <i class="fas fa-edit"></i> Edit
                 </button>
             </td>
@@ -670,76 +682,75 @@ async function editUser(userId) {
 
     form.innerHTML = `
         <div class="modal-body">
-            <div class="user-cell mb-3">
-                <div class="user-avatar">
-                    ${avatarUrl ? 
-                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${(user.username || '?').charAt(0).toUpperCase()}</div>';">` : 
-                        `<div class="avatar-fallback">${(user.username || '?').charAt(0).toUpperCase()}</div>`
+            <div class="content-card" style="margin-bottom: 1.5rem; background: var(--bg-main);">
+                <div class="user-cell">
+                    <div class="user-avatar" style="width: 56px; height: 56px; font-size: 1.25rem;">
+                        ${avatarUrl ? 
+                            `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${(user.username || '?').charAt(0).toUpperCase()}</div>';">` : 
+                            `<div class="avatar-fallback">${(user.username || '?').charAt(0).toUpperCase()}</div>`
+                        }
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" style="font-size: 1.125rem;">
+                            ${user.first_name || user.last_name ? 
+                                `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
+                                user.username || 'Anonymous'}
+                        </div>
+                        <div class="user-username">
+                            @${user.username || 'no_username'}
+                        </div>
+                        <div class="user-id" style="font-family: monospace; color: var(--text-dim);">ID: ${user.user_id}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label>Coins Balance</label>
+                    <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}" style="font-family: monospace; font-weight: 600; color: var(--primary);">
+                </div>
+                <div class="form-group">
+                    <label>Value Per Click</label>
+                    <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}" style="font-family: monospace;">
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; letter-spacing: 0.05em;">Quick Actions</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <button class="btn btn-outline" id="add-coins-btn">
+                        <i class="fas fa-plus-circle" style="color: var(--success);"></i> Add Coins
+                    </button>
+                    <button class="btn btn-outline" id="reset-score-btn" data-user-id="${user.user_id}">
+                        <i class="fas fa-redo" style="color: var(--warning);"></i> Reset Score
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--danger); margin-bottom: 0.75rem; letter-spacing: 0.05em;">Danger Zone</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    ${user.is_banned ? 
+                        `<button class="btn btn-success" id="unban-btn" data-user-id="${user.user_id}">
+                            <i class="fas fa-check"></i> Unban User
+                        </button>` :
+                        `<button class="btn btn-danger" id="ban-btn" data-user-id="${user.user_id}">
+                            <i class="fas fa-ban"></i> Ban User
+                        </button>`
                     }
+                    <button class="btn btn-outline" id="delete-user-btn" data-user-id="${user.user_id}" style="color: var(--danger); border-color: var(--danger-glow);">
+                        <i class="fas fa-trash"></i> Delete User
+                    </button>
                 </div>
-                <div class="user-details">
-                    <div class="user-name">
-                        ${user.first_name || user.last_name ? 
-                            `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
-                            user.username || 'Anonymous'}
-                    </div>
-                    <div class="user-username">
-                        @${user.username || 'no_username'}
-                    </div>
-                    <div class="user-id">ID: ${user.user_id}</div>
-                </div>
-            </div>
-
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>User ID</label>
-                    <input type="text" class="form-control" value="${user.user_id}" disabled>
-                </div>
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" class="form-control" value="${user.username || ''}" disabled>
-                </div>
-            </div>
-
-            <h4 class="section-title">Stats Management</h4>
-            <div class="grid-2">
-                <div class="form-group">
-                    <label>Coins</label>
-                    <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}">
-                </div>
-                <div class="form-group">
-                    <label>Per Click</label>
-                    <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}">
-                </div>
-            </div>
-
-            <div class="action-grid mt-3">
-                <button class="btn btn-success" id="add-coins-btn">
-                    <i class="fas fa-plus-circle"></i> Add Coins
-                </button>
-                <button class="btn btn-warning" id="reset-score-btn" data-user-id="${user.user_id}">
-                    <i class="fas fa-redo"></i> Reset Score
-                </button>
-                ${user.is_banned ? 
-                    `<button class="btn btn-success" id="unban-btn" data-user-id="${user.user_id}">
-                        <i class="fas fa-check"></i> Unban User
-                    </button>` :
-                    `<button class="btn btn-danger" id="ban-btn" data-user-id="${user.user_id}">
-                        <i class="fas fa-ban"></i> Ban User
-                    </button>`
-                }
-                <button class="btn btn-danger" id="delete-user-btn" data-user-id="${user.user_id}">
-                    <i class="fas fa-trash"></i> Delete User
-                </button>
             </div>
         </div>
 
         <div class="modal-footer">
-            <button class="btn btn-primary" id="save-user-changes">
-                <i class="fas fa-save"></i> Save Changes
-            </button>
             <button class="btn btn-outline" id="cancel-edit-user">
                 Cancel
+            </button>
+            <button class="btn btn-primary" id="save-user-changes">
+                <i class="fas fa-save"></i> Save Changes
             </button>
         </div>
     `;
@@ -1063,7 +1074,7 @@ function renderTransactionsTable() {
     if (!tbody) return;
 
     if (transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" class="loading">No transactions found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transactions found</td></tr>';
         return;
     }
 
@@ -1083,23 +1094,20 @@ function renderTransactionsTable() {
         return `
         <tr>
             <td>
-                <div class="transaction-flow-compact">
-                    <div class="flow-user-compact">
-                        <strong>From:</strong> ${senderInfo}
-                    </div>
-                    <div class="flow-arrow">→</div>
-                    <div class="flow-user-compact">
-                        <strong>To:</strong> ${receiverInfo}
-                    </div>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div style="flex: 1;">${senderInfo}</div>
+                    <div style="color: var(--text-dim);"><i class="fas fa-long-arrow-alt-right"></i></div>
+                    <div style="flex: 1;">${receiverInfo}</div>
                 </div>
             </td>
             <td>
-                <span class="flow-amount">
-                    <i class="fas fa-coins"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
-                </span>
+                <div style="font-weight: 700; color: var(--success); font-family: monospace;">
+                    <i class="fas fa-coins" style="font-size: 0.8rem; opacity: 0.7;"></i> ${new Decimal(tx.amount || 0).toFixed(6)}
+                </div>
             </td>
             <td class="timestamp" title="${formatDateTime(tx.created_at)}">
-                ${formatTimeAgo(tx.created_at)}
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(tx.created_at)}</div>
+                <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(tx.created_at)}</div>
             </td>
         </tr>
         `;
@@ -1159,7 +1167,7 @@ function renderUserLogsTable() {
     if (!tbody) return;
 
     if (userLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="loading">No user logs found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No logs found</td></tr>';
         return;
     }
 
@@ -1178,9 +1186,10 @@ function renderUserLogsTable() {
         <tr>
             <td>${userInfo}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td class="col-wide">${parseDetails(log.details)}</td>
+            <td><div class="details-text" style="max-width: 400px; font-size: 0.8rem; line-height: 1.4;">${parseDetails(log.details)}</div></td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
-                ${formatTimeAgo(log.created_at)}
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
+                <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
             </td>
         </tr>
         `;
@@ -1240,7 +1249,7 @@ function renderAdminLogsTable() {
     if (!tbody) return;
 
     if (adminLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No admin logs found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No logs found</td></tr>';
         return;
     }
 
@@ -1253,21 +1262,22 @@ function renderAdminLogsTable() {
 
         const targetDisplay = log.target_user_id 
             ? `User ${String(log.target_user_id).substring(0, 8)}...`
-            : 'System';
+            : '<span style="color: var(--text-dim);">System</span>';
 
         return `
         <tr>
             <td>
                 <div class="user-info-compact">
-                    <div class="user-name">${adminDisplay}</div>
-                    <div class="user-id">ID: ${String(log.admin_id).substring(0, 8)}...</div>
+                    <div class="user-name" style="font-size: 0.875rem;">${adminDisplay}</div>
+                    <div class="user-id" style="font-size: 0.7rem; font-family: monospace;">ID: ${String(log.admin_id).substring(0, 8)}...</div>
                 </div>
             </td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td>${targetDisplay}</td>
-            <td class="col-wide">${parseDetails(log.details)}</td>
+            <td><div style="font-size: 0.875rem; font-weight: 500;">${targetDisplay}</div></td>
+            <td><div class="details-text" style="max-width: 350px; font-size: 0.8rem; line-height: 1.4;">${parseDetails(log.details)}</div></td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
-                ${formatTimeAgo(log.created_at)}
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
+                <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
             </td>
         </tr>
         `;
@@ -1402,22 +1412,22 @@ function renderPagination(type, totalCount, currentPageNum) {
         return;
     }
     
-    let paginationHTML = '';
+    let paginationHTML = '<div class="pagination-container" style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1.5rem;">';
     
     if (currentPageNum > 1) {
         paginationHTML += `
-            <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
+            <button class="btn btn-outline btn-sm" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum - 1})">
                 <i class="fas fa-chevron-left"></i>
             </button>
         `;
     }
     
-    for (let i = 1; i <= totalPages; i++) {
+         for (let i = Math.max(1, currentPageNum - 2); i <= Math.min(totalPages, currentPageNum + 2); i++) {
         if (i === currentPageNum) {
-            paginationHTML += `<button class="page-btn active">${i}</button>`;
+            paginationHTML += `<button class="btn btn-primary btn-sm">${i}</button>`;
         } else {
             paginationHTML += `
-                <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">
+                <button class="btn btn-outline btn-sm" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${i})">
                     ${i}
                 </button>
             `;
@@ -1426,12 +1436,13 @@ function renderPagination(type, totalCount, currentPageNum) {
     
     if (currentPageNum < totalPages) {
         paginationHTML += `
-            <button class="page-btn" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
+            <button class="btn btn-outline btn-sm" onclick="load${type.charAt(0).toUpperCase() + type.slice(1)}(${currentPageNum + 1})">
                 <i class="fas fa-chevron-right"></i>
             </button>
         `;
     }
     
+    paginationHTML += '</div>';
     paginationElement.innerHTML = paginationHTML;
 }
 
