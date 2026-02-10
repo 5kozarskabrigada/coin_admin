@@ -82,6 +82,12 @@
             </nav>
             
             <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
+                <!-- Global Search -->
+                <div class="global-search-container" style="position: relative;">
+                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.875rem;"></i>
+                    <input type="text" id="global-search" class="form-control" placeholder="Search... (Ctrl+K)" style="padding-left: 35px; width: 250px; background: var(--bg-darker); border-color: var(--border-light); font-size: 0.875rem;">
+                </div>
+                
                 <div class="user-info" style="display: flex; align-items: center; gap: 0.75rem;">
                     <div class="user-avatar" style="width: 32px; height: 32px;">
                         <i class="fas fa-user-shield"></i>
@@ -319,14 +325,22 @@
                 <div id="user-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">User Activity Logs</h1>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="user-logs-search" class="form-control" placeholder="Search logs..." style="width: 240px;">
-                            <select id="user-logs-action-filter" class="form-control" style="width: 160px;">
-                                <option value="">All Actions</option>
-                                <option value="solo_lottery_win">Lottery Wins</option>
-                                <option value="upgrade_purchase">Upgrades</option>
-                                <option value="coin_transfer">Transfers</option>
-                            </select>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end;">
+                            <div class="form-group" style="flex: 1;">
+                                <label><i class="fas fa-search"></i> Search Logs</label>
+                                <input type="text" id="user-logs-search" class="form-control" placeholder="Search by name, ID, or detail...">
+                            </div>
+                            <div class="form-group" style="width: 200px;">
+                                <label><i class="fas fa-filter"></i> Action Type</label>
+                                <select id="user-logs-action-filter" class="form-control">
+                                    <option value="">All Actions</option>
+                                    <option value="login">Login</option>
+                                    <option value="click">Click</option>
+                                    <option value="upgrade">Upgrades</option>
+                                    <option value="lottery_win">Lottery Wins</option>
+                                    <option value="transfer">Transfers</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="content-card">
@@ -353,14 +367,21 @@
                 <div id="admin-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">Admin Activity Logs</h1>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="admin-logs-search" class="form-control" placeholder="Search logs..." style="width: 240px;">
-                            <select id="admin-logs-action-filter" class="form-control" style="width: 160px;">
-                                <option value="">All Actions</option>
-                                <option value="ban_user">Bans</option>
-                                <option value="add_coins">Coin Additions</option>
-                                <option value="delete_user">Deletions</option>
-                            </select>
+                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: flex-end;">
+                            <div class="form-group" style="flex: 1;">
+                                <label><i class="fas fa-search"></i> Search Admin Logs</label>
+                                <input type="text" id="admin-logs-search" class="form-control" placeholder="Search actor, target, or details...">
+                            </div>
+                            <div class="form-group" style="width: 200px;">
+                                <label><i class="fas fa-filter"></i> Action Type</label>
+                                <select id="admin-logs-action-filter" class="form-control">
+                                    <option value="">All Actions</option>
+                                    <option value="update_user">Update User</option>
+                                    <option value="ban_user">Ban/Unban</option>
+                                    <option value="maintenance">Maintenance</option>
+                                    <option value="config_change">Config Changes</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                     <div class="content-card">

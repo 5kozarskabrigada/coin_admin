@@ -400,6 +400,51 @@ window.addEventListener('hashchange', () => {
     }
 });
 
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+async function handleGlobalSearch(query) {
+    if (!query || query.length < 2) {
+        // If query is cleared, refresh the current section
+        const hash = window.location.hash.split('?')[0].replace('#', '') || 'dashboard';
+        showSection(hash, false);
+        return;
+    }
+
+    showNotification(`Searching for "${query}"...`, 'info');
+
+    // Based on the current active section, apply filtering or call specific search
+    const activeSection = document.querySelector('.section.active')?.id;
+    
+    switch (activeSection) {
+        case 'users':
+            loadUsers(1); // loadUsers already uses the search input value
+            break;
+        case 'transactions':
+            loadTransactions(1);
+            break;
+        case 'user-logs':
+            loadUserLogs(1);
+            break;
+        case 'admin-logs':
+            loadAdminLogs(1);
+            break;
+        default:
+            // If on dashboard, maybe just search users as default
+            showSection('users');
+            break;
+    }
+}
+
 async function loadDashboardStats() {
     if (!currentUser) return;
 
@@ -566,16 +611,16 @@ function formatUserInfo(user) {
 
     return `
         <div class="user-cell">
-            <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">
+            <div class="user-avatar" style="width: 40px; height: 40px; font-size: 0.85rem; flex-shrink: 0;">
                 ${avatarUrl ? 
-                    `<img src="${avatarUrl}" alt="${displayName}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${displayName.charAt(0).toUpperCase()}</div>';">` : 
-                    `<div class="avatar-fallback">${displayName.charAt(0).toUpperCase()}</div>`
+                    `<img src="${avatarUrl}" alt="${displayName}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${displayName.charAt(0).toUpperCase()}</div>';">` : 
+                    `<div class="avatar-fallback"><i class="fas fa-user" style="opacity: 0.5;"></i></div>`
                 }
             </div>
-            <div class="user-info-compact">
-                <div class="user-name" style="font-size: 0.875rem;">${escapeHtml(displayName)}</div>
-                ${username ? `<div class="user-username" style="font-size: 0.7rem;">${escapeHtml(username)}</div>` : ''}
-                ${userId ? `<div class="user-id" title="${userId}">ID: ${userId}</div>` : ''}
+            <div class="user-info-compact" style="min-width: 0;">
+                <div class="user-name" style="font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayName)}</div>
+                ${username ? `<div class="user-username" style="font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(username)}</div>` : ''}
+                ${userId ? `<div class="user-id" title="${userId}" style="font-size: 0.65rem; padding: 1px 4px;">ID: ${userId}</div>` : ''}
             </div>
         </div>
     `;
@@ -597,23 +642,35 @@ function renderRecentActivity(logs) {
     }
 
     tbody.innerHTML = logs.slice(0, 10).map(log => {
-        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        // Robust action type detection
+        let actionType = log.action_type;
+        if (!actionType && log.details) {
+            if (log.details.toLowerCase().includes('maintenance')) {
+                actionType = log.details.toLowerCase().includes('enable') ? 'enable_maintenance' : 'disable_maintenance';
+            } else if (log.details.toLowerCase().includes('login')) {
+                actionType = log.source === 'ADMIN' ? 'admin_login' : 'login';
+            }
+        }
+        
+        const action = actionTypeMap[actionType] || { name: actionType || 'System Action', color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
-         
-        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null') ? null : val;
+        // Defensive data extraction
+        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
 
         const userData = {
-            first_name: getVal(log.first_name),
-            last_name: getVal(log.last_name),
-            username: getVal(log.username),
-            user_id: getVal(log.user_id) || getVal(log.id),
-            photo_url: getVal(log.photo_url) || getVal(log.avatar_url) || getVal(log.profile_photo_url)
+            first_name: getVal(log.first_name) || getVal(log.admin_first_name),
+            last_name: getVal(log.last_name) || getVal(log.admin_last_name),
+            username: getVal(log.username) || getVal(log.admin_username),
+            user_id: getVal(log.user_id) || getVal(log.admin_id) || getVal(log.id),
+            photo_url: getVal(log.photo_url) || getVal(log.avatar_url) || getVal(log.profile_photo_url) || getVal(log.admin_photo_url)
         };
 
         const userInfo = (userData.user_id || userData.username) 
             ? formatUserInfo(userData)
             : '<span style="color: var(--text-dim);">System</span>';
+        
+        const detailsText = getVal(log.details) || action.name || 'Activity logged';
         
         return `
             <tr>
@@ -623,7 +680,7 @@ function renderRecentActivity(logs) {
                 </td>
                 <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
                 <td>${userInfo}</td>
-                <td><div class="details-text" style="max-width: 400px;">${log.details || '-'}</div></td>
+                <td><div class="details-text" style="max-width: 400px;">${detailsText}</div></td>
                 <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}" style="opacity: 0.8;">${log.source || 'USER'}</span></td>
             </tr>
         `;
@@ -633,12 +690,12 @@ function renderRecentActivity(logs) {
 async function loadUsers(page = 1) {
     if (!currentUser) return;
     
-    const searchTerm = document.getElementById('user-search')?.value || '';
+    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('user-search')?.value || '';
     const tbody = document.getElementById('users-tbody');
     
     if (!tbody) return;
     
-    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading users...</td></tr>';
+    tbody.innerHTML = renderSkeletonRows(7, 7);
 
     try {
         const url = new URL(`${BACKEND_URL}/admin/users`);
@@ -662,7 +719,7 @@ async function loadUsers(page = 1) {
         users = data.users || [];
         currentPage.users = page;
         
-        renderUsersTable();
+        renderUsersTable(searchTerm);
         renderPagination('users', data.totalCount || 0, page);
 
     } catch (error) {
@@ -672,7 +729,19 @@ async function loadUsers(page = 1) {
     }
 }
 
-function renderUsersTable() {
+function renderSkeletonRows(cols, rows) {
+    let html = '';
+    for (let i = 0; i < rows; i++) {
+        html += '<tr>';
+        for (let j = 0; j < cols; j++) {
+            html += '<td><div class="skeleton-line" style="height: 1.5rem; background: var(--bg-darker); border-radius: 4px; animation: pulse 1.5s infinite;"></div></td>';
+        }
+        html += '</tr>';
+    }
+    return html;
+}
+
+function renderUsersTable(searchTerm = '') {
     const tbody = document.getElementById('users-tbody');
     if (!tbody) return;
 
@@ -682,30 +751,8 @@ function renderUsersTable() {
     }
 
     tbody.innerHTML = users.map(user => {
-        const avatarUrl = getTelegramAvatarUrl(user);
+        const userInfo = formatUserInfo(user);
         
-        const userCell = `
-            <div class="user-cell">
-                <div class="user-avatar">
-                    ${avatarUrl ? 
-                        `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${(user.username || '?').charAt(0).toUpperCase()}</div>';">` : 
-                        `<div class="avatar-fallback">${(user.username || '?').charAt(0).toUpperCase()}</div>`
-                    }
-                </div>
-                <div class="user-details">
-                    <div class="user-name">
-                        ${user.first_name || user.last_name ? 
-                            `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
-                            user.username || 'Anonymous'}
-                    </div>
-                    <div class="user-username">
-                        @${user.username || 'no_username'}
-                    </div>
-                    <div class="user-id" title="${user.user_id}">ID: ${String(user.user_id).substring(0, 8)}...</div>
-                </div>
-            </div>
-        `;
-
         let statusHtml = '<div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">';
         if (user.is_banned === true) {
             statusHtml += '<span class="action-badge danger">BANNED</span>';
@@ -720,22 +767,29 @@ function renderUsersTable() {
 
         return `
         <tr>
-            <td>${userCell}</td>
-            <td><div style="font-weight: 700; color: var(--primary); font-family: monospace;">${new Decimal(user.score || 0).toFixed(4)}</div></td>
-            <td><div style="font-size: 0.8rem;">${new Decimal(user.click_value || 0).toFixed(6)}</div></td>
-            <td><div style="font-size: 0.8rem;">${new Decimal(user.auto_click_rate || 0).toFixed(6)}</div></td>
+            <td>${highlightText(userInfo, searchTerm)}</td>
+            <td><div style="font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace;">${new Decimal(user.score || 0).toFixed(4)}</div></td>
+            <td><div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${new Decimal(user.click_value || 0).toFixed(6)}</div></td>
+            <td><div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${new Decimal(user.auto_click_rate || 0).toFixed(6)}</div></td>
             <td class="timestamp" title="${user.last_updated ? formatDateTime(user.last_updated) : 'Never'}">
-                <div style="font-size: 0.85rem;">${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}</div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}</div>
+                <div style="font-size: 0.7rem; color: var(--text-dim);">${user.last_updated ? formatDateTime(user.last_updated) : ''}</div>
             </td>
             <td>${statusHtml}</td>
             <td>
                 <button class="btn btn-outline btn-sm edit-user-btn" data-user-id="${user.user_id}">
-                    <i class="fas fa-edit"></i> Edit
+                    <i class="fas fa-edit"></i>
                 </button>
             </td>
         </tr>
         `;
     }).join('');
+}
+
+function highlightText(html, query) {
+    if (!query || query.length < 2) return html;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return html.replace(regex, '<mark style="background: var(--warning); color: black; border-radius: 2px; padding: 0 2px;">$1</mark>');
 }
 
 async function editUser(userId) {
@@ -776,7 +830,7 @@ async function editUser(userId) {
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                 <div class="form-group">
                     <label>Coins Balance</label>
                     <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}" style="font-family: monospace; font-weight: 600; color: var(--primary);">
@@ -784,6 +838,10 @@ async function editUser(userId) {
                 <div class="form-group">
                     <label>Value Per Click</label>
                     <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}" style="font-family: monospace;">
+                </div>
+                <div class="form-group">
+                    <label>Value Offline (PH)</label>
+                    <input type="text" id="edit-auto-click-rate" class="form-control" value="${new Decimal(user.auto_click_rate || 0).toFixed(9)}" style="font-family: monospace;" maxlength="10">
                 </div>
             </div>
 
@@ -1074,15 +1132,42 @@ async function saveUserChanges() {
         return;
     }
 
+    const saveBtn = document.getElementById('save-user-changes');
+    const originalBtnContent = saveBtn.innerHTML;
+    
     const score = document.getElementById('edit-score').value;
     const clickValue = document.getElementById('edit-click-value').value;
+    const autoClickRate = document.getElementById('edit-auto-click-rate').value;
 
-    if (!score || !clickValue) {
+    if (!score || !clickValue || !autoClickRate) {
         showNotification('Please fill in all required fields', 'error');
         return;
     }
 
+    // Client-side validation
     try {
+        const scoreVal = new Decimal(score);
+        const clickVal = new Decimal(clickValue);
+        const autoVal = new Decimal(autoClickRate);
+
+        if (scoreVal.isNegative() || clickVal.isNegative() || autoVal.isNegative()) {
+            showNotification('Values must be non-negative', 'error');
+            return;
+        }
+        
+        if (autoClickRate.length > 10) {
+            showNotification('Offline value is too long (max 10 chars)', 'error');
+            return;
+        }
+    } catch (e) {
+        showNotification('Invalid numeric values', 'error');
+        return;
+    }
+
+    try {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
         const response = await fetch(`${BACKEND_URL}/admin/users/${currentEditingUserId}`, {
             method: 'POST',
             headers: {
@@ -1091,33 +1176,53 @@ async function saveUserChanges() {
             },
             body: JSON.stringify({
                 score: new Decimal(score).toFixed(9),
-                click_value: new Decimal(clickValue).toFixed(9)
+                click_value: new Decimal(clickValue).toFixed(9),
+                auto_click_rate: new Decimal(autoClickRate).toFixed(9)
             })
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
+        const updatedUser = await response.json();
+        
+        // Update local cache
+        const userIndex = users.findIndex(u => u.user_id == currentEditingUserId);
+        if (userIndex !== -1 && updatedUser.user) {
+            users[userIndex] = updatedUser.user;
+        }
+
         showNotification('User updated successfully', 'success');
         closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
+        renderUsersTable();
         await logAdminAction('update_user', currentEditingUserId, 'User stats updated');
 
     } catch (error) {
         console.error('Error saving user changes:', error);
         showNotification(`Failed to save changes: ${error.message}`, 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalBtnContent;
     }
 }
 
 async function loadTransactions(page = 1) {
     if (!currentUser) return;
 
+    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('transactions-search')?.value || '';
     const tbody = document.getElementById('transactions-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="3" class="loading">Loading transactions...</td></tr>';
+    tbody.innerHTML = renderSkeletonRows(3, 10);
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/enhanced-transaction-details?page=${page}&limit=${itemsPerPage}`, {
+        const url = new URL(`${BACKEND_URL}/admin/enhanced-transaction-details`);
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', itemsPerPage);
+        if (searchTerm) {
+            url.searchParams.set('search', searchTerm);
+        }
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -1131,7 +1236,7 @@ async function loadTransactions(page = 1) {
         transactions = data.transactions || [];
         currentPage.transactions = page;
         
-        renderTransactionsTable();
+        renderTransactionsTable(searchTerm);
         renderPagination('transactions', data.totalCount || 0, page);
 
     } catch (error) {
@@ -1141,7 +1246,7 @@ async function loadTransactions(page = 1) {
     }
 }
 
-function renderTransactionsTable() {
+function renderTransactionsTable(searchTerm = '') {
     const tbody = document.getElementById('transactions-tbody');
     if (!tbody) return;
 
@@ -1169,9 +1274,9 @@ function renderTransactionsTable() {
         <tr>
             <td>
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <div style="flex: 1;">${senderInfo}</div>
+                    <div style="flex: 1; min-width: 0;">${highlightText(senderInfo, searchTerm)}</div>
                     <div style="color: var(--text-dim); flex-shrink: 0;"><i class="fas fa-long-arrow-alt-right fa-lg"></i></div>
-                    <div style="flex: 1;">${receiverInfo}</div>
+                    <div style="flex: 1; min-width: 0;">${highlightText(receiverInfo, searchTerm)}</div>
                 </div>
             </td>
             <td>
@@ -1191,13 +1296,21 @@ function renderTransactionsTable() {
 async function loadUserLogs(page = 1) {
     if (!currentUser) return;
 
+    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('user-logs-search')?.value || '';
+    const actionFilter = document.getElementById('user-logs-action-filter')?.value || '';
     const tbody = document.getElementById('user-logs-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="4" class="loading">Loading user logs...</td></tr>';
+    tbody.innerHTML = renderSkeletonRows(4, 10);
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/enhanced-user-logs?page=${page}&limit=${itemsPerPage}`, {
+        const url = new URL(`${BACKEND_URL}/admin/enhanced-user-logs`);
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', itemsPerPage);
+        if (searchTerm) url.searchParams.set('search', searchTerm);
+        if (actionFilter) url.searchParams.set('action_type', actionFilter);
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -1207,7 +1320,12 @@ async function loadUserLogs(page = 1) {
 
         let data;
         if (!response.ok) {
-            const fallbackResponse = await fetch(`${BACKEND_URL}/admin/user-logs?page=${page}&limit=${itemsPerPage}`, {
+            const fallbackUrl = new URL(`${BACKEND_URL}/admin/user-logs`);
+            fallbackUrl.searchParams.set('page', page);
+            fallbackUrl.searchParams.set('limit', itemsPerPage);
+            if (searchTerm) fallbackUrl.searchParams.set('search', searchTerm);
+            
+            const fallbackResponse = await fetch(fallbackUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1223,7 +1341,7 @@ async function loadUserLogs(page = 1) {
         userLogs = data.logs || [];
         currentPage.userLogs = page;
         
-        renderUserLogsTable();
+        renderUserLogsTable(searchTerm);
         renderPagination('user-logs', data.totalCount || userLogs.length, page);
 
     } catch (error) {
@@ -1233,7 +1351,7 @@ async function loadUserLogs(page = 1) {
     }
 }
 
-function renderUserLogsTable() {
+function renderUserLogsTable(searchTerm = '') {
     const tbody = document.getElementById('user-logs-tbody');
     if (!tbody) return;
 
@@ -1256,7 +1374,7 @@ function renderUserLogsTable() {
 
         return `
         <tr>
-            <td>${userInfo}</td>
+            <td>${highlightText(userInfo, searchTerm)}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
             <td><div class="details-text" style="max-width: 450px;">${parseDetails(log.details)}</div></td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
@@ -1271,13 +1389,21 @@ function renderUserLogsTable() {
 async function loadAdminLogs(page = 1) {
     if (!currentUser) return;
 
+    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('admin-logs-search')?.value || '';
+    const actionFilter = document.getElementById('admin-logs-action-filter')?.value || '';
     const tbody = document.getElementById('admin-logs-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading admin logs...</td></tr>';
+    tbody.innerHTML = renderSkeletonRows(5, 10);
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/enhanced-admin-logs?page=${page}&limit=${itemsPerPage}`, {
+        const url = new URL(`${BACKEND_URL}/admin/enhanced-admin-logs`);
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', itemsPerPage);
+        if (searchTerm) url.searchParams.set('search', searchTerm);
+        if (actionFilter) url.searchParams.set('action_type', actionFilter);
+
+        const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -1287,7 +1413,12 @@ async function loadAdminLogs(page = 1) {
 
         let data;
         if (!response.ok) {
-            const fallbackResponse = await fetch(`${BACKEND_URL}/admin/admin-logs?page=${page}&limit=${itemsPerPage}`, {
+            const fallbackUrl = new URL(`${BACKEND_URL}/admin/admin-logs`);
+            fallbackUrl.searchParams.set('page', page);
+            fallbackUrl.searchParams.set('limit', itemsPerPage);
+            if (searchTerm) fallbackUrl.searchParams.set('search', searchTerm);
+
+            const fallbackResponse = await fetch(fallbackUrl, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -1303,7 +1434,7 @@ async function loadAdminLogs(page = 1) {
         adminLogs = data.logs || [];
         currentPage.adminLogs = page;
         
-        renderAdminLogsTable();
+        renderAdminLogsTable(searchTerm);
         renderPagination('admin-logs', data.totalCount || adminLogs.length, page);
 
     } catch (error) {
@@ -1313,7 +1444,7 @@ async function loadAdminLogs(page = 1) {
     }
 }
 
-function renderAdminLogsTable() {
+function renderAdminLogsTable(searchTerm = '') {
     const tbody = document.getElementById('admin-logs-tbody');
     if (!tbody) return;
 
@@ -1326,17 +1457,16 @@ function renderAdminLogsTable() {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        // Try to find admin info from various potential field names
+        // Actor info
         const adminData = {
             first_name: log.admin_first_name || log.first_name,
             username: log.admin_username || log.username,
             user_id: log.admin_id,
             photo_url: log.admin_photo_url || log.photo_url || log.profile_photo_url
         };
-
         const adminInfo = formatUserInfo(adminData);
 
-        // Try to find target info
+        // Target info
         const targetData = log.target_user_id ? {
             first_name: log.target_first_name,
             last_name: log.target_last_name,
@@ -1344,16 +1474,17 @@ function renderAdminLogsTable() {
             user_id: log.target_user_id,
             photo_url: log.target_photo_url
         } : null;
-
         const targetInfo = targetData ? formatUserInfo(targetData) : '<span style="color: var(--text-dim);">System</span>';
 
         return `
         <tr>
-            <td style="vertical-align: top; padding-top: 1rem;">${adminInfo}</td>
-            <td style="vertical-align: top; padding-top: 1.25rem;"><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td style="vertical-align: top; padding-top: 1rem;">${targetInfo}</td>
-            <td style="vertical-align: top; padding-top: 1rem;"><div class="details-text" style="max-width: 400px; font-size: 0.75rem;">${parseDetails(log.details)}</div></td>
-            <td class="timestamp" title="${formatDateTime(log.created_at)}" style="vertical-align: top; padding-top: 1rem;">
+            <td style="vertical-align: top; padding: 1rem 0.75rem; min-width: 180px;">${highlightText(adminInfo, searchTerm)}</td>
+            <td style="vertical-align: top; padding: 1.25rem 0.75rem; width: 150px;"><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
+            <td style="vertical-align: top; padding: 1rem 0.75rem; min-width: 180px;">${highlightText(targetInfo, searchTerm)}</td>
+            <td style="vertical-align: top; padding: 1rem 0.75rem;">
+                <div class="details-text" style="max-width: 450px; font-size: 0.75rem; overflow-x: auto; white-space: pre-wrap; font-family: 'JetBrains Mono', monospace;">${highlightText(parseDetails(log.details), searchTerm)}</div>
+            </td>
+            <td class="timestamp" title="${formatDateTime(log.created_at)}" style="vertical-align: top; padding: 1rem 0.75rem; width: 120px;">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
             </td>
@@ -1490,39 +1621,57 @@ function renderPagination(type, totalCount, currentPageNum) {
         return;
     }
     
-    // Convert kebab-case to CamelCase for function names (e.g., user-logs -> UserLogs)
+    // Update URL hash for shareability
+    const hash = window.location.hash.split('?')[0];
+    const params = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
+    params.set(`${type}_page`, currentPageNum);
+    window.location.hash = `${hash.replace('#', '')}?${params.toString()}`;
+    
+    // Convert kebab-case to CamelCase for function names
     const functionSuffix = type.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
     const loadFunctionName = `load${functionSuffix}`;
     
     let paginationHTML = '<div class="pagination-container" style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1.5rem;">';
     
-    if (currentPageNum > 1) {
-        paginationHTML += `
-            <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum - 1})">
-                <i class="fas fa-chevron-left"></i>
-            </button>
-        `;
+    // Prev button
+    paginationHTML += `
+        <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum - 1})" ${currentPageNum <= 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+            <i class="fas fa-chevron-left"></i> Prev
+        </button>
+    `;
+    
+    // Numbered links
+    const startPage = Math.max(1, currentPageNum - 2);
+    const endPage = Math.min(totalPages, currentPageNum + 2);
+    
+    if (startPage > 1) {
+        paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(1)">1</button>`;
+        if (startPage > 2) paginationHTML += '<span style="color: var(--text-dim);">...</span>';
     }
     
-    for (let i = Math.max(1, currentPageNum - 2); i <= Math.min(totalPages, currentPageNum + 2); i++) {
+    for (let i = startPage; i <= endPage; i++) {
         if (i === currentPageNum) {
-            paginationHTML += `<button class="btn btn-primary btn-sm">${i}</button>`;
+            paginationHTML += `<button class="btn btn-primary btn-sm" style="min-width: 32px;">${i}</button>`;
         } else {
             paginationHTML += `
-                <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${i})">
+                <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${i})" style="min-width: 32px;">
                     ${i}
                 </button>
             `;
         }
     }
     
-    if (currentPageNum < totalPages) {
-        paginationHTML += `
-            <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum + 1})">
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        `;
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) paginationHTML += '<span style="color: var(--text-dim);">...</span>';
+        paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${totalPages})">${totalPages}</button>`;
     }
+    
+    // Next button
+    paginationHTML += `
+        <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum + 1})" ${currentPageNum >= totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+            Next <i class="fas fa-chevron-right"></i>
+        </button>
+    `;
     
     paginationHTML += '</div>';
     paginationElement.innerHTML = paginationHTML;
@@ -1553,6 +1702,33 @@ function debounceSearch() {
 }
 
 function setupEventListeners() {
+    // Global Search (Ctrl+K)
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'k') {
+            e.preventDefault();
+            document.getElementById('global-search')?.focus();
+        }
+    });
+
+    document.getElementById('global-search')?.addEventListener('input', debounce((e) => {
+        handleGlobalSearch(e.target.value);
+    }, 300));
+
+    document.getElementById('user-logs-search')?.addEventListener('input', debounce((e) => {
+        loadUserLogs(1);
+    }, 300));
+
+    document.getElementById('admin-logs-search')?.addEventListener('input', debounce((e) => {
+        loadAdminLogs(1);
+    }, 300));
+
+    document.getElementById('user-logs-action-filter')?.addEventListener('change', () => {
+        loadUserLogs(1);
+    });
+
+    document.getElementById('admin-logs-action-filter')?.addEventListener('change', () => {
+        loadAdminLogs(1);
+    });
      
     document.getElementById('login-button')?.addEventListener('click', login);
     
