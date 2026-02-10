@@ -209,7 +209,7 @@ async function checkAuth() {
             document.getElementById('admin-name').textContent = 'Administrator';
             showAdminPanel();
             
-            // Respect hash or default to dashboard
+             
             const initialHash = window.location.hash.replace('#', '');
             if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
                 showSection(initialHash, false);
@@ -392,7 +392,7 @@ function showSection(sectionName, updateHash = true) {
     }
 }
 
-// Add hash change listener
+ 
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.replace('#', '');
     if (hash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(hash)) {
@@ -538,7 +538,7 @@ function filterTableByAction(tbodyId, actionType) {
 function formatUserInfo(user) {
     if (!user) return '<span style="color: var(--text-dim);">System</span>';
     
-    // Defensive data extraction
+     
     const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null') ? null : val;
     
     const photoUrl = getVal(user.photo_url) || getVal(user.avatar_url) || getVal(user.profile_photo_url);
@@ -594,7 +594,7 @@ function renderRecentActivity(logs) {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
-        // Defensive data extraction
+         
         const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null') ? null : val;
 
         const userData = {
