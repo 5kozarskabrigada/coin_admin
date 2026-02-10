@@ -18,13 +18,11 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/themes/dark.css">
 </head>
 <body>
-     
     <div id="maintenance-badge" class="maintenance-badge hidden">
         <i class="fas fa-tools"></i>
         <span>Maintenance Mode Active</span>
     </div>
 
-     
     <section id="login-section">
         <div class="login-card">
             <div class="login-header">
@@ -50,7 +48,6 @@
         </div>
     </section>
 
-     
     <section id="admin-panel" style="display: none;">
         <header class="admin-header">
             <div class="logo">
@@ -84,7 +81,6 @@
             </nav>
             
             <div class="header-right" style="display: flex; align-items: center; gap: 1rem;">
-                
                 <div class="global-search-container" style="position: relative;">
                     <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.875rem;"></i>
                     <input type="text" id="global-search" class="form-control" placeholder="Search... (Ctrl+K)" style="padding-left: 35px; width: 250px; background: var(--bg-darker); border-color: var(--border-light); font-size: 0.875rem;">
@@ -106,7 +102,6 @@
         </header>
 
         <main class="admin-main">
-             
             <aside class="admin-sidebar">
                 <div class="sidebar-section">
                     <h3 class="stat-label" style="margin-bottom: 1rem;">Quick Actions</h3>
@@ -167,9 +162,7 @@
                 </div>
             </aside>
 
-             
             <div class="admin-content">
-                 
                 <div id="dashboard" class="section active">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">Dashboard Overview</h1>
@@ -262,7 +255,6 @@
                     </div>
                 </div>
 
-                 
                 <div id="users" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">User Management</h1>
@@ -295,16 +287,26 @@
                     </div>
                 </div>
 
-                 
                 <div id="transactions" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">Transaction History</h1>
                         <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="transactions-search" class="form-control" placeholder="Search transactions..." style="width: 240px;">
                             <button class="btn btn-outline btn-sm" id="export-transactions-btn"><i class="fas fa-download"></i></button>
                         </div>
                     </div>
                     <div class="content-card">
+                        <div class="advanced-search-container" style="margin-bottom: 1.5rem;">
+                            <div class="unified-search-bar" id="unified-search-bar-transactions">
+                                <div class="search-chips" id="search-chips-transactions"></div>
+                                <input type="text" id="unified-search-input-transactions" placeholder="Search transactions... (e.g. sender:John status:success)" autocomplete="off">
+                                <i class="fas fa-search search-icon"></i>
+                                <div class="search-suggestions" id="search-suggestions-transactions"></div>
+                            </div>
+                            <div class="search-tip">
+                                <i class="fas fa-info-circle"></i>
+                                Tip: Use <kbd>user:</kbd>, <kbd>sender:</kbd>, <kbd>receiver:</kbd>, <kbd>status:</kbd>, or <kbd>date:</kbd> for advanced filtering.
+                            </div>
+                        </div>
                         <div class="table-responsive">
                             <table class="data-table">
                                 <thead>
@@ -324,7 +326,6 @@
                     </div>
                 </div>
 
-                 
                 <div id="user-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">User Activity Logs</h1>
@@ -361,7 +362,6 @@
                     </div>
                 </div>
 
-                 
                 <div id="admin-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title" style="font-size: 1.5rem;">Admin Activity Logs</h1>
@@ -402,7 +402,6 @@
         </main>
     </section>
 
-    
     <div id="quick-search-overlay" class="overlay">
         <div class="quick-search-container">
             <div class="quick-search-header">
@@ -421,7 +420,6 @@
         </div>
     </div>
 
-    
     <div id="edit-user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">

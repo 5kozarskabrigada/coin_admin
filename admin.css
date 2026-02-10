@@ -1,5 +1,4 @@
 :root {
-     
     --primary: #6366f1;
     --primary-hover: #4f46e5;
     --primary-light: #818cf8;
@@ -21,25 +20,21 @@
     --info-hover: #2563eb;
     --info-glow: rgba(59, 130, 246, 0.15);
     
-     
     --bg-main: #0f172a;
     --bg-card: #1e293b;
     --bg-card-hover: #2d3748;
     --bg-darker: #070a14;
     --bg-input: #0f172a;
     
-     
     --border: #334155;
     --border-light: rgba(51, 65, 85, 0.5);
     --border-focus: #6366f1;
     
-     
     --text-primary: #f8fafc;
     --text-secondary: #cbd5e1;
     --text-muted: #94a3b8;
     --text-dim: #64748b;
     
-     
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -47,7 +42,6 @@
     --glass-bg: rgba(30, 41, 59, 0.7);
     --glass-border: rgba(255, 255, 255, 0.1);
     
-     
     --radius-sm: 0.375rem;
     --radius: 0.5rem;
     --radius-lg: 0.75rem;
@@ -58,7 +52,6 @@
     --font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
- 
 * {
     margin: 0;
     padding: 0;
@@ -74,7 +67,6 @@ body {
     min-height: 100vh;
 }
 
- 
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -90,7 +82,6 @@ body {
     background: var(--text-dim);
 }
 
- 
 #login-section {
     display: flex;
     justify-content: center;
@@ -160,6 +151,11 @@ body {
 
 .section.active {
     display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes pulse {
@@ -254,10 +250,8 @@ mark {
     color: var(--text-primary);
 }
 
-.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
 .btn-block { width: 100%; }
 
- 
 .content-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -282,7 +276,6 @@ mark {
     gap: 0.5rem;
 }
 
- 
 .form-group {
     margin-bottom: 1.25rem;
 }
@@ -312,7 +305,6 @@ mark {
     box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
- 
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -377,7 +369,6 @@ mark {
     margin-top: 0.25rem;
 }
 
- 
 .table-responsive {
     width: 100%;
     overflow-x: auto;
@@ -416,7 +407,6 @@ mark {
     background: rgba(255, 255, 255, 0.02);
 }
 
- 
 .user-cell {
     display: flex;
     align-items: center;
@@ -458,7 +448,6 @@ mark {
     color: var(--text-dim);
 }
 
- 
 .admin-nav {
     display: flex;
     gap: 0.5rem;
@@ -488,7 +477,6 @@ mark {
     color: white;
 }
 
-/* Quick Search Overlay */
 #quick-search-overlay {
     display: none;
     align-items: flex-start;
@@ -651,7 +639,6 @@ kbd {
     box-shadow: 0 1px 1px rgba(0,0,0,0.2);
 }
 
-/* Advanced Search System */
 .unified-search-container {
     position: relative;
     width: 100%;
@@ -706,7 +693,9 @@ kbd {
     color: var(--danger);
 }
 
-#unified-search-input {
+#unified-search-input,
+#unified-search-input-admin,
+#unified-search-input-transactions {
     flex: 1;
     min-width: 120px;
     background: transparent;
@@ -715,6 +704,62 @@ kbd {
     color: var(--text-primary);
     font-size: 0.95rem;
     padding: 4px 0;
+}
+
+#unified-search-input::placeholder,
+#unified-search-input-admin::placeholder,
+#unified-search-input-transactions::placeholder {
+    color: var(--text-dim) !important;
+    opacity: 0.7;
+}
+
+.details-text {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    word-break: break-word;
+    white-space: pre-wrap;
+    max-width: none !important;
+}
+
+.update-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: var(--bg-darker);
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+}
+
+.update-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.details-change {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.old-val {
+    color: var(--danger);
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+
+.new-val {
+    color: var(--success);
+    font-weight: 600;
+}
+
+.details-label {
+    color: var(--text-muted);
+    font-weight: 600;
+    min-width: 100px;
 }
 
 .search-suggestions {
@@ -779,7 +824,6 @@ kbd {
     border-radius: 3px;
 }
 
-/* Date Picker Integration */
 .flatpickr-calendar {
     background: var(--bg-card) !important;
     border: 1px solid var(--border-light) !important;
@@ -791,8 +835,6 @@ kbd {
     border-color: var(--primary) !important;
 }
 
-/* Modals */
- 
 .modal {
     display: none;
     position: fixed;
@@ -841,7 +883,6 @@ kbd {
     gap: 0.75rem;
 }
 
- 
 .action-badge {
     display: inline-flex;
     align-items: center;
@@ -859,7 +900,6 @@ kbd {
 .action-badge.info { background: var(--info-glow); color: var(--info); }
 .action-badge.primary { background: var(--primary-glow); color: var(--primary); }
 
- 
 .text-primary { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
@@ -890,7 +930,6 @@ kbd {
 .gap-2 { gap: 0.5rem; }
 .gap-3 { gap: 1rem; }
 
- 
 .notification {
     position: fixed;
     top: 1.5rem;
@@ -932,7 +971,6 @@ kbd {
 .notification.warning { border-left-color: var(--warning); }
 .notification.warning .notification-icon { color: var(--warning); }
 
- 
 .avatar-fallback {
     width: 100%;
     height: 100%;
@@ -945,7 +983,6 @@ kbd {
     font-size: 0.875rem;
 }
 
- 
 .details-text {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     color: var(--text-secondary);
@@ -980,7 +1017,6 @@ kbd {
     gap: 2px;
 }
 
- 
 .maintenance-badge {
     position: fixed;
     top: 0;
@@ -1000,8 +1036,6 @@ kbd {
     box-shadow: var(--shadow);
 }
 
- 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
@@ -1029,10 +1063,8 @@ kbd {
     -webkit-text-fill-color: transparent;
 }
 
-
 .hidden { display: none !important; }
 
- 
 @media (max-width: 1024px) {
     .admin-sidebar { width: 80px; padding: 1rem 0.5rem; align-items: center; }
     .sidebar-title, .sidebar-btn span { display: none; }

@@ -93,7 +93,7 @@ function formatDateTime(dateString) {
 }
 
 function showNotification(message, type = 'info') {
-         document.querySelectorAll('.notification').forEach(n => n.remove());
+    document.querySelectorAll('.notification').forEach(n => n.remove());
     
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -113,7 +113,7 @@ function showNotification(message, type = 'info') {
     
     document.body.appendChild(notification);
     
-         setTimeout(() => {
+    setTimeout(() => {
         if (notification.parentNode) {
             notification.style.opacity = '0';
             notification.style.transform = 'translateX(20px)';
@@ -138,6 +138,31 @@ function parseDetails(details) {
         }
         
         if (typeof parsed === 'object' && parsed !== null) {
+            
+            if (parsed.updates) {
+                let html = '<div class="details-text update-details">';
+                for (const [key, change] of Object.entries(parsed.updates)) {
+                    const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    let oldVal = change.old;
+                    let newVal = change.new;
+
+                    if (typeof oldVal === 'number') oldVal = new Decimal(oldVal).toFixed(9);
+                    if (typeof newVal === 'number') newVal = new Decimal(newVal).toFixed(9);
+                    if (oldVal === null || oldVal === undefined) oldVal = 'None';
+                    if (newVal === null || newVal === undefined) newVal = 'None';
+
+                    html += `<div class="details-item update-item">
+                        <span class="details-label">${formattedKey}:</span>
+                        <span class="details-change"><span class="old-val">${oldVal}</span> <i class="fas fa-long-arrow-alt-right"></i> <span class="new-val">${newVal}</span></span>
+                    </div>`;
+                }
+                if (parsed.reason) {
+                    html += `<div class="details-item"><span class="details-label">Reason:</span> <span class="details-value">${parsed.reason}</span></div>`;
+                }
+                html += '</div>';
+                return html;
+            }
+
             let html = '<div class="details-text">';
             for (const [key, value] of Object.entries(parsed)) {
                 const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -147,7 +172,7 @@ function parseDetails(details) {
                     formattedValue = JSON.stringify(value, null, 2);
                 } else if (typeof value === 'boolean') {
                     formattedValue = value ? 'Yes' : 'No';
-                } else if (typeof value === 'number' && (key.includes('amount') || key.includes('coins') || key.includes('score'))) {
+                } else if (typeof value === 'number' && (key.includes('amount') || key.includes('coins') || key.includes('score') || key.includes('value') || key.includes('rate'))) {
                     formattedValue = new Decimal(value).toFixed(9);
                 }
                 
@@ -178,7 +203,6 @@ async function initAdminPanel() {
     try {
         console.log('🚀 Initializing admin panel...');
         
-         
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
         await checkAuth();
@@ -187,6 +211,7 @@ async function initAdminPanel() {
         setupSearchListeners();
         setupAdvancedSearch('userLogs');
         setupAdvancedSearch('adminLogs');
+        setupAdvancedSearch('transactions');
         setupRealTimePolling();
         
         await checkMaintenanceMode();
@@ -212,7 +237,6 @@ async function checkAuth() {
             document.getElementById('admin-name').textContent = 'Administrator';
             showAdminPanel();
             
-             
             const initialHash = window.location.hash.replace('#', '');
             if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
                 showSection(initialHash, false);
@@ -395,7 +419,6 @@ function showSection(sectionName, updateHash = true) {
     }
 }
 
- 
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.replace('#', '');
     if (hash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(hash)) {
@@ -417,18 +440,19 @@ function debounce(func, wait) {
 
 async function handleGlobalSearch(query) {
     if (!query || query.length < 2) {
-                const hash = window.location.hash.split('?')[0].replace('#', '') || 'dashboard';
+        const hash = window.location.hash.split('?')[0].replace('#', '') || 'dashboard';
         showSection(hash, false);
         return;
     }
 
     showNotification(`Searching for "${query}"...`, 'info');
 
-        const activeSection = document.querySelector('.section.active')?.id;
+    const activeSection = document.querySelector('.section.active')?.id;
     
     switch (activeSection) {
         case 'users':
-            loadUsers(1);             break;
+            loadUsers(1);
+            break;
         case 'transactions':
             loadTransactions(1);
             break;
@@ -439,7 +463,7 @@ async function handleGlobalSearch(query) {
             loadAdminLogs(1);
             break;
         default:
-                        showSection('users');
+            showSection('users');
             break;
     }
 }
@@ -504,7 +528,6 @@ async function loadRecentActivity() {
 }
 
 function setupSearchListeners() {
-     
     const userLogsSearch = document.getElementById('user-logs-search');
     if (userLogsSearch) {
         userLogsSearch.addEventListener('input', (e) => {
@@ -512,7 +535,6 @@ function setupSearchListeners() {
         });
     }
     
-     
     const transactionsSearch = document.getElementById('transactions-search');
     if (transactionsSearch) {
         transactionsSearch.addEventListener('input', (e) => {
@@ -520,7 +542,6 @@ function setupSearchListeners() {
         });
     }
     
-     
     const adminLogsSearch = document.getElementById('admin-logs-search');
     if (adminLogsSearch) {
         adminLogsSearch.addEventListener('input', (e) => {
@@ -528,7 +549,6 @@ function setupSearchListeners() {
         });
     }
     
-     
     const userLogsFilter = document.getElementById('user-logs-action-filter');
     if (userLogsFilter) {
         userLogsFilter.addEventListener('change', (e) => {
@@ -536,7 +556,6 @@ function setupSearchListeners() {
         });
     }
 
-     
     const adminLogsFilter = document.getElementById('admin-logs-action-filter');
     if (adminLogsFilter) {
         adminLogsFilter.addEventListener('change', (e) => {
@@ -669,7 +688,7 @@ function renderRecentActivity(logs) {
     }
 
     tbody.innerHTML = logs.slice(0, 10).map(log => {
-                let actionType = log.action_type;
+        let actionType = log.action_type;
         if (!actionType && log.details) {
             if (log.details.toLowerCase().includes('maintenance')) {
                 actionType = log.details.toLowerCase().includes('enable') ? 'enable_maintenance' : 'disable_maintenance';
@@ -681,7 +700,7 @@ function renderRecentActivity(logs) {
         const action = actionTypeMap[actionType] || { name: actionType || 'System Action', color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
-                const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
+        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
 
         const userData = {
             first_name: getVal(log.first_name) || getVal(log.admin_first_name),
@@ -793,9 +812,9 @@ function renderUsersTable(searchTerm = '') {
         return `
         <tr>
             <td>${highlightText(userInfo, searchTerm)}</td>
-            <td><div style="font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace;">${new Decimal(user.score || 0).toFixed(4)}</div></td>
-            <td><div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${new Decimal(user.click_value || 0).toFixed(6)}</div></td>
-            <td><div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${new Decimal(user.auto_click_rate || 0).toFixed(6)}</div></td>
+            <td><div style="font-weight: 700; color: var(--primary); font-family: 'JetBrains Mono', monospace;">${new Decimal(user.score || 0).toFixed(9)}</div></td>
+            <td><div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${new Decimal(user.click_value || 0).toFixed(9)}</div></td>
+            <td><div style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace;">${new Decimal(user.auto_click_rate || 0).toFixed(9)}</div></td>
             <td class="timestamp" title="${user.last_updated ? formatDateTime(user.last_updated) : 'Never'}">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${user.last_updated ? formatTimeAgo(user.last_updated) : 'Never'}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${user.last_updated ? formatDateTime(user.last_updated) : ''}</div>
@@ -816,9 +835,7 @@ function highlightText(text, term) {
     const cleanTerm = term.trim();
     if (cleanTerm.length === 0) return text;
     
-    
     if (text.includes('<')) {
-        
         const div = document.createElement('div');
         div.innerHTML = text;
         
@@ -842,13 +859,11 @@ function highlightText(text, term) {
 }
 
 function setupRealTimePolling() {
-    
     setInterval(() => {
         if (currentUser && document.getElementById('dashboard').classList.contains('active')) {
             loadDashboardStats();
             loadDashboardActivity();
         }
-        
         
         if (currentUser && document.getElementById('transactions').classList.contains('active')) {
             loadTransactions(currentPage.transactions || 1);
@@ -965,7 +980,6 @@ async function editUser(userId) {
         </div>
     `;
 
-    
     const cpsInput = document.getElementById('edit-auto-click-rate');
     const cpsPreview = document.getElementById('cps-preview');
     if (cpsInput && cpsPreview) {
@@ -1240,7 +1254,7 @@ async function saveUserChanges() {
         return;
     }
 
-        try {
+    try {
         const scoreVal = new Decimal(score);
         const clickVal = new Decimal(clickValue);
         const autoVal = new Decimal(autoClickRate);
@@ -1280,7 +1294,7 @@ async function saveUserChanges() {
 
         const updatedUser = await response.json();
         
-                const userIndex = users.findIndex(u => u.user_id == currentEditingUserId);
+        const userIndex = users.findIndex(u => u.user_id == currentEditingUserId);
         if (userIndex !== -1 && updatedUser.user) {
             users[userIndex] = updatedUser.user;
         }
@@ -1302,41 +1316,37 @@ async function saveUserChanges() {
 async function loadTransactions(page = 1) {
     if (!currentUser) return;
 
-    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('transactions-search')?.value || '';
+    const input = document.getElementById('unified-search-input-transactions');
+    const freeText = input?.value || '';
+    const filters = searchChips.transactions || [];
+    
     const tbody = document.getElementById('transactions-tbody');
     if (!tbody) return;
 
-    tbody.innerHTML = renderSkeletonRows(3, 10);
+    tbody.innerHTML = renderSkeletonRows(4, 15);
 
     try {
-        const url = new URL(`${BACKEND_URL}/admin/enhanced-transaction-details`);
+        const url = new URL(`${BACKEND_URL}/admin/transaction-details`);
         url.searchParams.set('page', page);
-        url.searchParams.set('limit', itemsPerPage);
-        if (searchTerm) {
-            url.searchParams.set('search', searchTerm);
-        }
+        url.searchParams.set('limit', 15);
+        url.searchParams.set('search', JSON.stringify({ freeText, filters }));
 
         const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
-            }
+            headers: { 'x-admin-secret': ADMIN_SECRET }
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
         const data = await response.json();
+        
         transactions = data.transactions || [];
         currentPage.transactions = page;
         
-        renderTransactionsTable(searchTerm);
+        renderTransactionsTable(freeText);
         renderPagination('transactions', data.totalCount || 0, page);
 
     } catch (error) {
         console.error('Error loading transactions:', error);
-        tbody.innerHTML = `<tr><td colspan="3" class="error">Error: ${error.message}</td></tr>`;
-        showNotification('Failed to load transactions', 'error');
+        tbody.innerHTML = `<tr><td colspan="5" class="error">Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -1378,7 +1388,7 @@ function renderTransactionsTable(searchTerm = '') {
             </td>
             <td>
                 <div style="font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace; font-size: 1rem;">
-                    <i class="fas fa-coins" style="font-size: 0.8rem; opacity: 0.7;"></i> ${new Decimal(tx.amount || 0).toFixed(6)}
+                    <i class="fas fa-coins" style="font-size: 0.8rem; opacity: 0.7;"></i> ${new Decimal(tx.amount || 0).toFixed(9)}
                 </div>
             </td>
             <td>
@@ -1397,27 +1407,53 @@ function renderTransactionsTable(searchTerm = '') {
 
 let searchChips = {
     userLogs: [],
-    adminLogs: []
+    adminLogs: [],
+    transactions: []
 };
 
 function setupAdvancedSearch(sectionId) {
     const isUIAdmin = sectionId === 'adminLogs';
-    const input = document.getElementById(`unified-search-input${isUIAdmin ? '-admin' : ''}`);
-    const bar = document.getElementById(`unified-search-bar${isUIAdmin ? '-admin' : ''}`);
-    const chipsContainer = document.getElementById(`search-chips${isUIAdmin ? '-admin' : ''}`);
-    const suggestionsContainer = document.getElementById(`search-suggestions${isUIAdmin ? '-admin' : ''}`);
+    const isTransactions = sectionId === 'transactions';
+    
+    let inputId = `unified-search-input${isUIAdmin ? '-admin' : ''}`;
+    let barId = `unified-search-bar${isUIAdmin ? '-admin' : ''}`;
+    let chipsId = `search-chips${isUIAdmin ? '-admin' : ''}`;
+    let suggestionsId = `search-suggestions${isUIAdmin ? '-admin' : ''}`;
+
+    if (isTransactions) {
+        inputId = 'unified-search-input-transactions';
+        barId = 'unified-search-bar-transactions';
+        chipsId = 'search-chips-transactions';
+        suggestionsId = 'search-suggestions-transactions';
+    }
+
+    const input = document.getElementById(inputId);
+    const bar = document.getElementById(barId);
+    const chipsContainer = document.getElementById(chipsId);
+    const suggestionsContainer = document.getElementById(suggestionsId);
 
     if (!input || !bar) return;
 
-    const filterKeys = isUIAdmin 
-        ? ['admin:', 'target:', 'action:', 'date:', 'before:', 'after:']
-        : ['user:', 'action:', 'date:', 'before:', 'after:'];
+    let filterKeys = [];
+    if (isUIAdmin) {
+        filterKeys = ['admin:', 'target:', 'action:', 'date:', 'before:', 'after:'];
+    } else if (isTransactions) {
+        filterKeys = ['user:', 'sender:', 'receiver:', 'status:', 'date:', 'before:', 'after:'];
+    } else {
+        filterKeys = ['user:', 'action:', 'date:', 'before:', 'after:'];
+    }
 
-    const actionValues = isUIAdmin
-        ? ['update_user', 'ban_user', 'unban_user', 'add_coins', 'reset_score', 'delete_user', 'send_broadcast', 'enable_maintenance', 'disable_maintenance']
-        : ['login', 'click', 'upgrade_purchase', 'solo_lottery_win', 'coin_transfer', 'coin_received'];
+    let actionValues = [];
+    if (isUIAdmin) {
+        actionValues = ['update_user', 'ban_user', 'unban_user', 'add_coins', 'reset_score', 'delete_user', 'send_broadcast', 'enable_maintenance', 'disable_maintenance'];
+    } else if (isTransactions) {
+        actionValues = ['success', 'pending', 'failed'];
+    } else {
+        actionValues = ['login', 'click', 'upgrade_purchase', 'solo_lottery_win', 'coin_transfer', 'coin_received'];
+    }
 
     let selectedSuggestionIndex = -1;
+    let autocompleteTimer = null;
 
     bar.addEventListener('click', () => input.focus());
 
@@ -1425,10 +1461,24 @@ function setupAdvancedSearch(sectionId) {
         const value = e.target.value;
         const lastWord = value.split(' ').pop();
         
+        clearTimeout(autocompleteTimer);
+        
         if (lastWord.includes(':')) {
             const [key, val] = lastWord.split(':');
-            if (filterKeys.includes(key + ':')) {
-                showSuggestions(key + ':', val, sectionId);
+            const keyWithColon = key + ':';
+            
+            if (filterKeys.includes(keyWithColon)) {
+                if (['user:', 'admin:', 'target:', 'sender:', 'receiver:'].includes(keyWithColon)) {
+                    if (val.length >= 1) {
+                        autocompleteTimer = setTimeout(() => {
+                            fetchUsersAutocomplete(keyWithColon, val, sectionId);
+                        }, 300);
+                    } else {
+                        hideSuggestions(sectionId);
+                    }
+                } else {
+                    showSuggestions(keyWithColon, val, sectionId);
+                }
             } else {
                 hideSuggestions(sectionId);
             }
@@ -1439,36 +1489,66 @@ function setupAdvancedSearch(sectionId) {
         }
     });
 
-    input.addEventListener('keydown', (e) => {
-        const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
-            updateSelectedSuggestion(suggestions);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
-            updateSelectedSuggestion(suggestions);
-        } else if (e.key === 'Enter') {
-            if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
-                e.preventDefault();
-                suggestions[selectedSuggestionIndex].click();
+    async function fetchUsersAutocomplete(key, val, sectionId) {
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/search-users?query=${encodeURIComponent(val)}&limit=8`, {
+                headers: { 'x-admin-secret': ADMIN_SECRET }
+            });
+            if (!response.ok) throw new Error('Search failed');
+            const users = await response.json();
+            
+            if (users.length > 0) {
+                const items = users.map(u => ({
+                    label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username || 'no_user'})`.trim(),
+                    value: key + u.user_id,
+                    icon: 'user',
+                    hint: u.user_id
+                }));
+                renderSuggestions(items, sectionId);
             } else {
-                if (sectionId === 'userLogs') loadUserLogs(1);
-                else if (sectionId === 'adminLogs') loadAdminLogs(1);
+                hideSuggestions(sectionId);
             }
-        } else if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId].length > 0) {
-            removeChip(searchChips[sectionId].length - 1, sectionId);
+        } catch (e) {
+            console.error('Autocomplete error:', e);
+            hideSuggestions(sectionId);
         }
-    });
+    }
+
+    function renderSuggestions(items, sectionId) {
+        suggestionsContainer.innerHTML = items.map((item, index) => `
+            <div class="suggestion-item" data-value="${item.value}">
+                <i class="fas fa-${item.icon}"></i>
+                <span class="suggestion-label">${item.label}</span>
+                <span class="suggestion-hint">${item.hint}</span>
+            </div>
+        `).join('');
+        
+        suggestionsContainer.classList.add('active');
+        
+        suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const val = item.getAttribute('data-value');
+                if (val.endsWith(':')) {
+                    input.value = val;
+                    input.focus();
+                } else {
+                    const parts = val.split(':');
+                    const k = parts[0] + ':';
+                    const v = parts.slice(1).join(':');
+                    addChip(k, v, sectionId);
+                    input.value = '';
+                }
+                hideSuggestions(sectionId);
+            });
+        });
+    }
 
     function showSuggestions(activeKey, activeValue, sectionId) {
         let items = [];
         if (activeKey === '') {
             items = filterKeys.filter(k => k.startsWith(activeValue)).map(k => ({ label: k, value: k, icon: 'filter', hint: 'Filter' }));
-        } else if (activeKey === 'action:') {
-            items = actionValues.filter(v => v.startsWith(activeValue)).map(v => ({ label: v, value: activeKey + v, icon: 'tag', hint: 'Action' }));
+        } else if (activeKey === 'action:' || activeKey === 'status:') {
+            items = actionValues.filter(v => v.startsWith(activeValue)).map(v => ({ label: v, value: activeKey + v, icon: 'tag', hint: activeKey === 'status:' ? 'Status' : 'Action' }));
         } else if (['date:', 'before:', 'after:'].includes(activeKey)) {
             items = [
                 { label: 'Today', value: activeKey + new Date().toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' },
@@ -1488,34 +1568,36 @@ function setupAdvancedSearch(sectionId) {
         }
 
         if (items.length > 0) {
-            suggestionsContainer.innerHTML = items.map((item, index) => `
-                <div class="suggestion-item" data-value="${item.value}">
-                    <i class="fas fa-${item.icon}"></i>
-                    <span class="suggestion-label">${item.label}</span>
-                    <span class="suggestion-hint">${item.hint}</span>
-                </div>
-            `).join('');
-            
-            suggestionsContainer.classList.add('active');
-            
-            suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
-                item.addEventListener('click', () => {
-                    const val = item.getAttribute('data-value');
-                    if (val.endsWith(':')) {
-                        input.value = val;
-                        input.focus();
-                    } else {
-                        const [k, v] = val.split(':');
-                        addChip(k + ':', v, sectionId);
-                        input.value = '';
-                    }
-                    hideSuggestions(sectionId);
-                });
-            });
+            renderSuggestions(items, sectionId);
         } else {
             hideSuggestions(sectionId);
         }
     }
+
+    input.addEventListener('keydown', (e) => {
+        const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
+            updateSelectedSuggestion(suggestions);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
+            updateSelectedSuggestion(suggestions);
+        } else if (e.key === 'Enter') {
+            if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
+                e.preventDefault();
+                suggestions[selectedSuggestionIndex].click();
+            } else {
+                if (sectionId === 'userLogs') loadUserLogs(1);
+                else if (sectionId === 'adminLogs') loadAdminLogs(1);
+                else if (sectionId === 'transactions') loadTransactions(1);
+            }
+        } else if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId].length > 0) {
+            removeChip(searchChips[sectionId].length - 1, sectionId);
+        }
+    });
 
     function hideSuggestions(sectionId) {
         suggestionsContainer.classList.remove('active');
@@ -1534,30 +1616,36 @@ function setupAdvancedSearch(sectionId) {
     }
 
     function addChip(key, value, sectionId) {
+        if (!searchChips[sectionId]) searchChips[sectionId] = [];
         searchChips[sectionId].push({ key, value });
         renderChips(sectionId);
         if (sectionId === 'userLogs') loadUserLogs(1);
         else if (sectionId === 'adminLogs') loadAdminLogs(1);
+        else if (sectionId === 'transactions') loadTransactions(1);
     }
 
-    function removeChip(index, sectionId) {
+    window.removeChip = (index, sectionId) => {
         searchChips[sectionId].splice(index, 1);
         renderChips(sectionId);
         if (sectionId === 'userLogs') loadUserLogs(1);
         else if (sectionId === 'adminLogs') loadAdminLogs(1);
-    }
+        else if (sectionId === 'transactions') loadTransactions(1);
+    };
+}
 
-    function renderChips(sectionId) {
-        chipsContainer.innerHTML = searchChips[sectionId].map((chip, index) => `
-            <div class="search-chip">
-                <span class="chip-key">${chip.key}</span>
-                <span class="chip-value">${chip.value}</span>
-                <i class="fas fa-times chip-remove" onclick="removeChip(${index}, '${sectionId}')"></i>
-            </div>
-        `).join('');
-    }
-
-    window.removeChip = removeChip;
+function renderChips(sectionId) {
+    const isUIAdmin = sectionId === 'adminLogs';
+    const isTransactions = sectionId === 'transactions';
+    const chipContainerId = isUIAdmin ? 'search-chips-admin' : (isTransactions ? 'search-chips-transactions' : 'search-chips');
+    const container = document.getElementById(chipContainerId);
+    if (!container) return;
+    container.innerHTML = (searchChips[sectionId] || []).map((chip, index) => `
+        <div class="search-chip">
+            <span class="chip-key">${chip.key}</span>
+            <span class="chip-value">${chip.value}</span>
+            <i class="fas fa-times chip-remove" onclick="removeChip(${index}, '${sectionId}')"></i>
+        </div>
+    `).join('');
 }
 
 async function loadUserLogs(page = 1) {
@@ -1934,7 +2022,7 @@ let quickSearchResults = [];
 let selectedSearchIndex = -1;
 
 function setupEventListeners() {
-        document.addEventListener('keydown', (e) => {
+    document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'k') {
             e.preventDefault();
             toggleQuickSearch(true);
@@ -1983,54 +2071,44 @@ function setupEventListeners() {
         }
     });
     
-     
     document.getElementById('dashboard-nav')?.addEventListener('click', () => showSection('dashboard'));
     document.getElementById('users-nav')?.addEventListener('click', () => showSection('users'));
     document.getElementById('transactions-nav')?.addEventListener('click', () => showSection('transactions'));
     document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
     document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
     
-     
     document.getElementById('logout-button')?.addEventListener('click', logout);
     
-     
     document.getElementById('refresh-data-btn')?.addEventListener('click', refreshAllData);
     document.getElementById('dashboard-refresh')?.addEventListener('click', loadDashboardStats);
     document.getElementById('refresh-activity-btn')?.addEventListener('click', loadRecentActivity);
     
-     
     document.getElementById('user-search-btn')?.addEventListener('click', () => loadUsers(1));
     document.getElementById('user-search')?.addEventListener('input', debounceSearch);
     
-     
     document.getElementById('export-users-btn')?.addEventListener('click', exportUserData);
     document.getElementById('export-transactions-btn')?.addEventListener('click', exportTransactionData);
     
-     
     document.getElementById('add-coins-all-btn')?.addEventListener('click', showAddCoinsAllModal);
     document.getElementById('reset-all-scores-btn')?.addEventListener('click', resetAllScores);
     document.getElementById('clear-cache-btn')?.addEventListener('click', clearCache);
     document.getElementById('create-backup-btn')?.addEventListener('click', createBackup);
     
-     
     document.getElementById('broadcast-btn')?.addEventListener('click', showBroadcastModal);
     document.getElementById('send-broadcast-btn')?.addEventListener('click', sendBroadcast);
     document.getElementById('cancel-broadcast-btn')?.addEventListener('click', () => closeModal('broadcast-modal'));
     
-     
     document.getElementById('maintenance-toggle-btn')?.addEventListener('click', toggleMaintenanceMode);
     document.getElementById('enable-maintenance-btn')?.addEventListener('click', enableMaintenanceMode);
     document.getElementById('disable-maintenance-btn')?.addEventListener('click', disableMaintenanceMode);
     document.getElementById('cancel-maintenance-btn')?.addEventListener('click', () => closeModal('maintenance-modal'));
     
-     
     document.getElementById('close-edit-modal')?.addEventListener('click', () => closeModal('edit-user-modal'));
     document.getElementById('close-add-coins-modal')?.addEventListener('click', () => closeModal('add-coins-modal'));
     document.getElementById('close-add-coins-all-modal')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
     document.getElementById('close-broadcast-modal')?.addEventListener('click', () => closeModal('broadcast-modal'));
     document.getElementById('close-maintenance-modal')?.addEventListener('click', () => closeModal('maintenance-modal'));
     
-     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
             e.target.classList.remove('active');
@@ -2038,7 +2116,6 @@ function setupEventListeners() {
         }
     });
     
-     
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             document.querySelectorAll('.modal.active').forEach(modal => {
@@ -2048,7 +2125,6 @@ function setupEventListeners() {
         }
     });
     
-     
     document.addEventListener('keydown', (e) => {
         if (e.ctrlKey && e.key === 'r') {
             e.preventDefault();
@@ -2056,7 +2132,6 @@ function setupEventListeners() {
         }
     });
     
-     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('sortable')) {
             const field = e.target.dataset.sort;
@@ -2087,14 +2162,12 @@ function setupEventListeners() {
             }
         }
         
-         
         if (e.target.closest('.edit-user-btn')) {
             const userId = e.target.closest('.edit-user-btn').dataset.userId;
             editUser(userId);
         }
     });
     
-     
     document.addEventListener('click', (e) => {
         if (e.target.id === 'add-coins-btn') {
             showAddCoinsModal();
@@ -2117,15 +2190,12 @@ function setupEventListeners() {
         }
     });
     
-     
     document.getElementById('confirm-add-coins')?.addEventListener('click', addCoinsToUser);
     document.getElementById('cancel-add-coins')?.addEventListener('click', () => closeModal('add-coins-modal'));
     
-     
     document.getElementById('confirm-add-coins-all')?.addEventListener('click', addCoinsToAllUsers);
     document.getElementById('cancel-add-coins-all')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
     
-     
     document.getElementById('add-coins-all-amount')?.addEventListener('input', updateCoinsCalculation);
 }
 
@@ -2264,7 +2334,6 @@ async function sendBroadcast() {
     }
 }
 
- 
 function toggleQuickSearch(show) {
     const overlay = document.getElementById('quick-search-overlay');
     const input = document.getElementById('quick-search-input');
@@ -2286,7 +2355,7 @@ async function handleQuickSearch(query) {
     }
 
     try {
-                const userResp = await fetch(`${BACKEND_URL}/admin/users?search=${encodeURIComponent(query)}&limit=5`, {
+        const userResp = await fetch(`${BACKEND_URL}/admin/users?search=${encodeURIComponent(query)}&limit=5`, {
             headers: { 'x-admin-secret': ADMIN_SECRET }
         });
         const userData = await userResp.json();
@@ -2317,11 +2386,11 @@ async function handleQuickSearch(query) {
 function handleQuickSearchKeydown(e) {
     if (e.key === 'ArrowDown') {
         e.preventDefault();
-        selectedSearchIndex = Math.min(selectedSearchIndex + 1, quickSearchResults.length - 1);
+        selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, quickSearchResults.length - 1);
         updateSelectedSearchResult();
     } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        selectedSearchIndex = Math.max(selectedSearchIndex - 1, 0);
+        selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
         updateSelectedSearchResult();
     } else if (e.key === 'Enter') {
         e.preventDefault();
@@ -2372,7 +2441,6 @@ document.addEventListener('DOMContentLoaded', function() {
     initAdminPanel();
 });
 
- 
 window.addEventListener('error', function(event) {
     console.error('Global error:', event.error);
     showNotification('An unexpected error occurred', 'error');
@@ -2383,7 +2451,6 @@ window.addEventListener('unhandledrejection', function(event) {
     showNotification('An unexpected error occurred', 'error');
 });
 
- 
 window.loadUsers = loadUsers;
 window.loadUserLogs = loadUserLogs;
 window.loadAdminLogs = loadAdminLogs;
