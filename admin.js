@@ -187,6 +187,7 @@ async function initAdminPanel() {
         setupSearchListeners();
         setupAdvancedSearch('userLogs');
         setupAdvancedSearch('adminLogs');
+        setupRealTimePolling();
         
         await checkMaintenanceMode();
         
@@ -581,9 +582,9 @@ function filterTableByAction(tbodyId, actionType) {
 function formatUserInfo(user) {
     if (!user) return '<span style="color: var(--text-dim);">System</span>';
     
-        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
+    const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
     
-    const photoUrl = getVal(user.photo_url) || getVal(user.avatar_url) || getVal(user.profile_photo_url);
+    const photoUrl = getVal(user.photo_url) || getVal(user.avatar_url) || getVal(user.profile_photo_url) || getVal(user.sender_photo_url) || getVal(user.receiver_photo_url);
     const firstName = getVal(user.first_name);
     const lastName = getVal(user.last_name);
     const usernameRaw = getVal(user.username);
@@ -604,23 +605,52 @@ function formatUserInfo(user) {
     }
     
     const username = usernameRaw ? `@${usernameRaw}` : '';
-    const userId = userIdRaw;
+    const initials = displayName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    const colors = ['#4f46e5', '#7c3aed', '#2563eb', '#0891b2', '#059669', '#16a34a', '#d97706', '#dc2626'];
+    const bgColor = colors[Math.abs(String(userIdRaw).split('').reduce((a, b) => a + b.charCodeAt(0), 0)) % colors.length];
 
     return `
         <div class="user-cell">
-            <div class="user-avatar" style="width: 40px; height: 40px; font-size: 0.85rem; flex-shrink: 0;">
+            <div class="user-avatar" style="width: 40px; height: 40px; font-size: 0.85rem; flex-shrink: 0; background: ${bgColor}; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
                 ${avatarUrl ? 
-                    `<img src="${avatarUrl}" alt="${displayName}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${displayName.charAt(0).toUpperCase()}</div>';">` : 
-                    `<div class="avatar-fallback"><i class="fas fa-user" style="opacity: 0.5;"></i></div>`
+                    `<img src="${avatarUrl}" alt="${displayName}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                     <div class="avatar-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${initials}</div>` : 
+                    `<div class="avatar-fallback" style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center;">${initials}</div>`
                 }
             </div>
-            <div class="user-info-compact" style="min-width: 0;">
-                <div class="user-name" style="font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayName)}</div>
-                ${username ? `<div class="user-username" style="font-size: 0.7rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(username)}</div>` : ''}
-                ${userId ? `<div class="user-id" title="${userId}" style="font-size: 0.65rem; padding: 1px 4px;">ID: ${userId}</div>` : ''}
+            <div class="user-info-compact" style="min-width: 0; margin-left: 0.75rem;">
+                <div class="user-name" style="font-size: 0.875rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayName)}</div>
+                ${username ? `<div class="user-username" style="font-size: 0.7rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(username)}</div>` : ''}
+                ${userIdRaw ? `<div class="user-id" title="${userIdRaw}" style="font-size: 0.65rem; color: var(--text-muted); opacity: 0.7;">ID: ${userIdRaw}</div>` : ''}
             </div>
         </div>
     `;
+}
+
+async function deleteLog(type, logId) {
+    if (!confirm(`Are you sure you want to delete this ${type === 'userLogs' ? 'user' : 'admin'} log entry? This action cannot be undone.`)) {
+        return;
+    }
+
+    try {
+        const endpoint = type === 'userLogs' ? `/admin/user-logs/${logId}` : `/admin/admin-logs/${logId}`;
+        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+            method: 'DELETE',
+            headers: {
+                'x-admin-secret': ADMIN_SECRET
+            }
+        });
+
+        if (!response.ok) throw new Error('Failed to delete log entry');
+
+        showNotification('Log entry deleted successfully', 'success');
+        if (type === 'userLogs') loadUserLogs(currentPage.userLogs);
+        else loadAdminLogs(currentPage.adminLogs);
+
+    } catch (error) {
+        console.error('Error deleting log:', error);
+        showNotification(`Delete failed: ${error.message}`, 'error');
+    }
 }
 
 function escapeHtml(text) {
@@ -781,10 +811,49 @@ function renderUsersTable(searchTerm = '') {
     }).join('');
 }
 
-function highlightText(html, query) {
-    if (!query || query.length < 2) return html;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return html.replace(regex, '<mark style="background: var(--warning); color: black; border-radius: 2px; padding: 0 2px;">$1</mark>');
+function highlightText(text, term) {
+    if (!term || !text || typeof text !== 'string') return text;
+    const cleanTerm = term.trim();
+    if (cleanTerm.length === 0) return text;
+    
+    
+    if (text.includes('<')) {
+        
+        const div = document.createElement('div');
+        div.innerHTML = text;
+        
+        const walk = (node) => {
+            if (node.nodeType === 3) { 
+                const regex = new RegExp(`(${cleanTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                const newNode = document.createElement('span');
+                newNode.innerHTML = node.textContent.replace(regex, '<mark style="background: var(--warning); color: black; padding: 0 2px; border-radius: 2px;">$1</mark>');
+                node.parentNode.replaceChild(newNode, node);
+            } else {
+                node.childNodes.forEach(walk);
+            }
+        };
+        
+        walk(div);
+        return div.innerHTML;
+    }
+    
+    const regex = new RegExp(`(${cleanTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<mark style="background: var(--warning); color: black; padding: 0 2px; border-radius: 2px;">$1</mark>');
+}
+
+function setupRealTimePolling() {
+    
+    setInterval(() => {
+        if (currentUser && document.getElementById('dashboard').classList.contains('active')) {
+            loadDashboardStats();
+            loadDashboardActivity();
+        }
+        
+        
+        if (currentUser && document.getElementById('transactions').classList.contains('active')) {
+            loadTransactions(currentPage.transactions || 1);
+        }
+    }, 30000);
 }
 
 async function editUser(userId) {
@@ -805,43 +874,59 @@ async function editUser(userId) {
         <div class="modal-body">
             <div class="content-card" style="margin-bottom: 1.5rem; background: var(--bg-main);">
                 <div class="user-cell">
-                    <div class="user-avatar" style="width: 56px; height: 56px; font-size: 1.25rem;">
+                    <div class="user-avatar" style="width: 56px; height: 56px; font-size: 1.25rem; background: #4f46e5; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">
                         ${avatarUrl ? 
-                            `<img src="${avatarUrl}" alt="${user.username || 'User'}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${(user.username || '?').charAt(0).toUpperCase()}</div>';">` : 
-                            `<div class="avatar-fallback">${(user.username || '?').charAt(0).toUpperCase()}</div>`
+                            `<img src="${avatarUrl}" alt="${user.username || 'User'}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                             <div class="avatar-fallback" style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center;">${(user.username || '?').charAt(0).toUpperCase()}</div>` : 
+                            `<div class="avatar-fallback" style="display: flex; width: 100%; height: 100%; align-items: center; justify-content: center;">${(user.username || '?').charAt(0).toUpperCase()}</div>`
                         }
                     </div>
-                    <div class="user-details">
-                        <div class="user-name" style="font-size: 1.125rem;">
+                    <div class="user-details" style="margin-left: 1rem;">
+                        <div class="user-name" style="font-size: 1.125rem; font-weight: 700;">
                             ${user.first_name || user.last_name ? 
                                 `${user.first_name || ''} ${user.last_name || ''}`.trim() : 
                                 user.username || 'Anonymous'}
                         </div>
-                        <div class="user-username">
+                        <div class="user-username" style="color: var(--text-dim); font-size: 0.9rem;">
                             @${user.username || 'no_username'}
                         </div>
-                        <div class="user-id" style="font-family: monospace; color: var(--text-dim);">ID: ${user.user_id}</div>
+                        <div class="user-id" style="font-family: monospace; color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem;">ID: ${user.user_id}</div>
                     </div>
                 </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                <div class="form-group">
-                    <label>Coins Balance</label>
-                    <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}" style="font-family: monospace; font-weight: 600; color: var(--primary);">
-                </div>
-                <div class="form-group">
-                    <label>Value Per Click</label>
-                    <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}" style="font-family: monospace;">
-                </div>
-                <div class="form-group">
-                    <label>Value Offline (PH)</label>
-                    <input type="text" id="edit-auto-click-rate" class="form-control" value="${new Decimal(user.auto_click_rate || 0).toFixed(9)}" style="font-family: monospace;" maxlength="10">
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Economic Settings</h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label>Coins Balance</label>
+                        <input type="text" id="edit-score" class="form-control" value="${new Decimal(user.score || 0).toFixed(9)}" style="font-family: 'JetBrains Mono', monospace; font-weight: 600; color: var(--primary);">
+                    </div>
+                    <div class="form-group">
+                        <label>Value Per Click</label>
+                        <input type="text" id="edit-click-value" class="form-control" value="${new Decimal(user.click_value || 0).toFixed(9)}" style="font-family: 'JetBrains Mono', monospace;">
+                    </div>
                 </div>
             </div>
 
             <div style="margin-bottom: 1.5rem;">
-                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem; letter-spacing: 0.05em;">Quick Actions</h4>
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Performance Configuration</h4>
+                <div style="display: grid; grid-template-columns: 1fr; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label>Clicks Per Second (Offline)</label>
+                        <div style="display: flex; gap: 1rem; align-items: center;">
+                            <input type="number" id="edit-auto-click-rate" class="form-control" value="${new Decimal(user.auto_click_rate || 0).toFixed(9)}" style="font-family: 'JetBrains Mono', monospace; flex: 1;" step="0.000000001" min="0" max="100">
+                            <div id="cps-preview" style="padding: 0.5rem 1rem; background: var(--bg-darker); border-radius: 6px; font-size: 0.85rem; color: var(--success); font-weight: 600; min-width: 140px; text-align: center;">
+                                ≈ ${(new Decimal(user.auto_click_rate || 0).times(60)).toFixed(6)} / min
+                            </div>
+                        </div>
+                        <p style="font-size: 0.7rem; color: var(--text-dim); mt-1;">Limits: 0.0 to 100.0 CPS. Affects background earnings.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 1.5rem;">
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--border-light); padding-bottom: 0.5rem;">Quick Actions</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                     <button class="btn btn-outline" id="add-coins-btn">
                         <i class="fas fa-plus-circle" style="color: var(--success);"></i> Add Coins
@@ -853,7 +938,7 @@ async function editUser(userId) {
             </div>
 
             <div>
-                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--danger); margin-bottom: 0.75rem; letter-spacing: 0.05em;">Danger Zone</h4>
+                <h4 style="font-size: 0.75rem; text-transform: uppercase; color: var(--danger); margin-bottom: 1rem; letter-spacing: 0.05em; border-bottom: 1px solid var(--danger-glow); padding-bottom: 0.5rem;">Danger Zone</h4>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                     ${user.is_banned ? 
                         `<button class="btn btn-success" id="unban-btn" data-user-id="${user.user_id}">
@@ -879,6 +964,22 @@ async function editUser(userId) {
             </button>
         </div>
     `;
+
+    
+    const cpsInput = document.getElementById('edit-auto-click-rate');
+    const cpsPreview = document.getElementById('cps-preview');
+    if (cpsInput && cpsPreview) {
+        cpsInput.addEventListener('input', (e) => {
+            try {
+                const val = new Decimal(e.target.value || 0);
+                cpsPreview.textContent = `≈ ${val.times(60).toFixed(6)} / min`;
+                if (val.gt(100)) cpsPreview.style.color = 'var(--danger)';
+                else cpsPreview.style.color = 'var(--success)';
+            } catch (e) {
+                cpsPreview.textContent = 'Invalid Value';
+            }
+        });
+    }
 
     document.getElementById('edit-user-modal').classList.add('active');
 }
@@ -1244,7 +1345,7 @@ function renderTransactionsTable(searchTerm = '') {
     if (!tbody) return;
 
     if (transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transactions found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No transactions found</td></tr>';
         return;
     }
 
@@ -1263,6 +1364,9 @@ function renderTransactionsTable(searchTerm = '') {
             photo_url: tx.receiver_photo_url
         });
 
+        const statusColor = tx.status === 'success' ? 'var(--success)' : (tx.status === 'pending' ? 'var(--warning)' : 'var(--danger)');
+        const statusIcon = tx.status === 'success' ? 'check-circle' : (tx.status === 'pending' ? 'clock' : 'times-circle');
+
         return `
         <tr>
             <td>
@@ -1276,6 +1380,11 @@ function renderTransactionsTable(searchTerm = '') {
                 <div style="font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace; font-size: 1rem;">
                     <i class="fas fa-coins" style="font-size: 0.8rem; opacity: 0.7;"></i> ${new Decimal(tx.amount || 0).toFixed(6)}
                 </div>
+            </td>
+            <td>
+                <span class="action-badge" style="background: ${statusColor}15; color: ${statusColor}; border: 1px solid ${statusColor}30; padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                    <i class="fas fa-${statusIcon}"></i> ${tx.status || 'success'}
+                </span>
             </td>
             <td class="timestamp" title="${formatDateTime(tx.created_at)}">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(tx.created_at)}</div>
@@ -1492,7 +1601,7 @@ function renderUserLogsTable(searchTerm = '') {
     if (!tbody) return;
 
     if (userLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No logs found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No logs found</td></tr>';
         return;
     }
 
@@ -1512,10 +1621,15 @@ function renderUserLogsTable(searchTerm = '') {
         <tr>
             <td>${highlightText(userInfo, searchTerm)}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td><div class="details-text" style="max-width: 450px;">${parseDetails(log.details)}</div></td>
+            <td><div class="details-text" style="max-width: 450px;">${highlightText(parseDetails(log.details), searchTerm)}</div></td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
+            </td>
+            <td>
+                <button class="btn btn-outline btn-sm" onclick="deleteLog('userLogs', '${log.id}')" title="Delete Log">
+                    <i class="fas fa-trash-alt" style="color: var(--danger);"></i>
+                </button>
             </td>
         </tr>
         `;
@@ -1563,7 +1677,7 @@ function renderAdminLogsTable(searchTerm = '') {
     if (!tbody) return;
 
     if (adminLogs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No logs found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-muted);">No logs found</td></tr>';
         return;
     }
 
@@ -1571,7 +1685,7 @@ function renderAdminLogsTable(searchTerm = '') {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-                const adminData = {
+        const adminData = {
             first_name: log.admin_first_name || 'System',
             username: log.admin_username,
             user_id: log.admin_id,
@@ -1579,7 +1693,7 @@ function renderAdminLogsTable(searchTerm = '') {
         };
         const adminInfo = formatUserInfo(adminData);
 
-                const targetData = log.target_user_id ? {
+        const targetData = log.target_user_id ? {
             first_name: log.target_first_name,
             last_name: log.target_last_name,
             username: log.target_username,
@@ -1599,6 +1713,11 @@ function renderAdminLogsTable(searchTerm = '') {
             <td class="timestamp" title="${formatDateTime(log.created_at)}" style="vertical-align: top; padding: 1rem 0.75rem; width: 120px;">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
+            </td>
+            <td>
+                <button class="btn btn-outline btn-sm" onclick="deleteLog('adminLogs', '${log.id}')" title="Delete Log">
+                    <i class="fas fa-trash-alt" style="color: var(--danger);"></i>
+                </button>
             </td>
         </tr>
         `;
@@ -1723,64 +1842,67 @@ function closeModal(modalId) {
 }
 
 function renderPagination(type, totalCount, currentPageNum) {
-    const totalPages = Math.ceil(totalCount / itemsPerPage);
     const paginationElement = document.getElementById(`${type}-pagination`);
-    
     if (!paginationElement) return;
-    
+
+    const totalPages = Math.ceil(totalCount / 15);
     if (totalPages <= 1) {
-        paginationElement.innerHTML = '';
+        paginationElement.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-dim); text-align: center; width: 100%; margin-top: 1rem;">Showing all ${totalCount} records</div>`;
         return;
     }
-    
-        const hash = window.location.hash.split('?')[0];
+
+    const hash = window.location.hash.split('?')[0];
     const params = new URLSearchParams(window.location.hash.includes('?') ? window.location.hash.split('?')[1] : '');
     params.set(`${type}_page`, currentPageNum);
     window.location.hash = `${hash.replace('#', '')}?${params.toString()}`;
-    
-        const functionSuffix = type.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
+
+    const functionSuffix = type.split('-').map(part => part.charAt(0).toUpperCase() + part.slice(1)).join('');
     const loadFunctionName = `load${functionSuffix}`;
-    
-    let paginationHTML = '<div class="pagination-container" style="display: flex; gap: 0.5rem; align-items: center; justify-content: center; margin-top: 1.5rem;">';
-    
-        paginationHTML += `
-        <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum - 1})" ${currentPageNum <= 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
-            <i class="fas fa-chevron-left"></i> Prev
-        </button>
-    `;
-    
-        const startPage = Math.max(1, currentPageNum - 2);
-    const endPage = Math.min(totalPages, currentPageNum + 2);
-    
-    if (startPage > 1) {
-        paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(1)">1</button>`;
-        if (startPage > 2) paginationHTML += '<span style="color: var(--text-dim);">...</span>';
-    }
-    
-    for (let i = startPage; i <= endPage; i++) {
-        if (i === currentPageNum) {
-            paginationHTML += `<button class="btn btn-primary btn-sm" style="min-width: 32px;">${i}</button>`;
-        } else {
-            paginationHTML += `
-                <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${i})" style="min-width: 32px;">
-                    ${i}
+
+    let paginationHTML = `
+        <div class="pagination-wrapper" style="display: flex; flex-direction: column; align-items: center; gap: 1rem; margin-top: 1.5rem;">
+            <div class="pagination-info" style="font-size: 0.8rem; color: var(--text-dim);">
+                Showing ${(currentPageNum - 1) * 15 + 1} - ${Math.min(currentPageNum * 15, totalCount)} of ${totalCount} records
+            </div>
+            <div class="pagination-container" style="display: flex; gap: 0.5rem; align-items: center; justify-content: center;">
+                <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum - 1})" ${currentPageNum <= 1 ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                    <i class="fas fa-chevron-left"></i>
                 </button>
-            `;
-        }
-    }
-    
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) paginationHTML += '<span style="color: var(--text-dim);">...</span>';
-        paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${totalPages})">${totalPages}</button>`;
-    }
-    
-        paginationHTML += `
-        <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum + 1})" ${currentPageNum >= totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
-            Next <i class="fas fa-chevron-right"></i>
-        </button>
     `;
-    
-    paginationHTML += '</div>';
+
+    const maxVisible = 5;
+    let start = Math.max(1, currentPageNum - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+    if (start > 1) {
+        paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(1)">1</button>`;
+        if (start > 2) paginationHTML += '<span style="color: var(--text-dim);">...</span>';
+    }
+
+    for (let i = start; i <= end; i++) {
+        paginationHTML += `<button class="btn ${i === currentPageNum ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="${loadFunctionName}(${i})" style="min-width: 32px;">${i}</button>`;
+    }
+
+    if (end < totalPages) {
+        if (end < totalPages - 1) paginationHTML += '<span style="color: var(--text-dim);">...</span>';
+        paginationHTML += `<button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(totalPages)">${totalPages}</button>`;
+    }
+
+    paginationHTML += `
+                <button class="btn btn-outline btn-sm" onclick="${loadFunctionName}(${currentPageNum + 1})" ${currentPageNum >= totalPages ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: 1rem;">
+                    <span style="font-size: 0.8rem; color: var(--text-dim);">Go to</span>
+                    <input type="number" class="form-control" style="width: 60px; height: 32px; padding: 0 0.5rem; font-size: 0.8rem; text-align: center;" 
+                        min="1" max="${totalPages}" value="${currentPageNum}" 
+                        onkeypress="if(event.key === 'Enter') { const val = parseInt(this.value); if(val >= 1 && val <= ${totalPages}) ${loadFunctionName}(val); }">
+                </div>
+            </div>
+        </div>
+    `;
+
     paginationElement.innerHTML = paginationHTML;
 }
 
