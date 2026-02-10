@@ -208,6 +208,14 @@ async function checkAuth() {
             currentUser = { id: 'admin-panel', email: 'admin@system.local' };
             document.getElementById('admin-name').textContent = 'Administrator';
             showAdminPanel();
+            
+            // Respect hash or default to dashboard
+            const initialHash = window.location.hash.replace('#', '');
+            if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
+                showSection(initialHash, false);
+            } else {
+                showSection('dashboard');
+            }
             return;
         }
 
@@ -236,6 +244,13 @@ async function checkAuth() {
             document.getElementById('admin-name').textContent = 
                 currentUser.email || currentUser.user_id;
             showAdminPanel();
+            
+            const initialHash = window.location.hash.replace('#', '');
+            if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
+                showSection(initialHash, false);
+            } else {
+                showSection('dashboard');
+            }
         }
     } catch (error) {
         console.error('Auth check failed:', error);
@@ -292,6 +307,14 @@ async function login() {
         document.getElementById('admin-name').textContent = 
             currentUser.email || currentUser.user_id;
         showAdminPanel();
+        
+        const initialHash = window.location.hash.replace('#', '');
+        if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
+            showSection(initialHash, false);
+        } else {
+            showSection('dashboard');
+        }
+        
         showNotification('Login successful!', 'success');
 
         await logAdminAction('admin_login', null, 'Admin logged in');
@@ -322,10 +345,12 @@ async function logout() {
 
 function showAdminPanel() {
     document.getElementById('login-section').style.display = 'none';
-    document.getElementById('admin-panel').style.display = 'block';
+    const panel = document.getElementById('admin-panel');
+    panel.style.display = 'flex';
+    panel.classList.add('active');
 }
 
-function showSection(sectionName) {
+function showSection(sectionName, updateHash = true) {
     document.querySelectorAll('.section').forEach(section => {
         section.classList.remove('active');
     });
@@ -339,7 +364,14 @@ function showSection(sectionName) {
         sectionElement.classList.add('active');
     }
 
-    document.getElementById(`${sectionName}-nav`).classList.add('active');
+    const navBtn = document.getElementById(`${sectionName}-nav`);
+    if (navBtn) {
+        navBtn.classList.add('active');
+    }
+
+    if (updateHash) {
+        window.location.hash = sectionName;
+    }
 
     switch (sectionName) {
         case 'dashboard':
@@ -359,6 +391,14 @@ function showSection(sectionName) {
             break;
     }
 }
+
+// Add hash change listener
+window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(hash)) {
+        showSection(hash, false);
+    }
+});
 
 async function loadDashboardStats() {
     if (!currentUser) return;
@@ -496,20 +536,41 @@ function filterTableByAction(tbodyId, actionType) {
 }
 
 function formatUserInfo(user) {
-    const hasFirst = user.first_name && user.first_name.trim().length > 0;
-    const hasLast = user.last_name && user.last_name.trim().length > 0;
-    const displayName = hasFirst
-        ? `${user.first_name}${hasLast ? ' ' + user.last_name : ''}`
-        : (user.username || 'Anonymous');
+    if (!user) return '<span style="color: var(--text-dim);">System</span>';
     
-    const username = user.username ? `@${user.username}` : '';
-    const userId = user.user_id ? String(user.user_id).substring(0, 8) + '...' : '';
+    // Defensive data extraction
+    const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null') ? null : val;
+    
+    const photoUrl = getVal(user.photo_url) || getVal(user.avatar_url) || getVal(user.profile_photo_url);
+    const firstName = getVal(user.first_name);
+    const lastName = getVal(user.last_name);
+    const usernameRaw = getVal(user.username);
+    const userIdRaw = getVal(user.user_id) || getVal(user.id) || getVal(user.sender_id) || getVal(user.receiver_id) || getVal(user.admin_id) || getVal(user.target_user_id);
+
+    const avatarUrl = photoUrl ? (photoUrl.startsWith('http') ? photoUrl : null) : null;
+    
+    const hasFirst = firstName && firstName.trim().length > 0;
+    const hasLast = lastName && lastName.trim().length > 0;
+    const displayName = hasFirst
+        ? `${firstName}${hasLast ? ' ' + lastName : ''}`
+        : (usernameRaw || 'Anonymous');
+    
+    const username = usernameRaw ? `@${usernameRaw}` : '';
+    const userId = userIdRaw;
 
     return `
-        <div class="user-info-compact">
-            <div class="user-name">${escapeHtml(displayName)}</div>
-            ${username ? `<div class="user-username">${escapeHtml(username)}</div>` : ''}
-            ${userId ? `<div class="user-id">ID: ${userId}</div>` : ''}
+        <div class="user-cell">
+            <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                ${avatarUrl ? 
+                    `<img src="${avatarUrl}" alt="${displayName}" onerror="this.style.display='none'; this.parentNode.innerHTML='<div class=\\'avatar-fallback\\'>${displayName.charAt(0).toUpperCase()}</div>';">` : 
+                    `<div class="avatar-fallback">${displayName.charAt(0).toUpperCase()}</div>`
+                }
+            </div>
+            <div class="user-info-compact">
+                <div class="user-name" style="font-size: 0.875rem;">${escapeHtml(displayName)}</div>
+                ${username ? `<div class="user-username" style="font-size: 0.7rem;">${escapeHtml(username)}</div>` : ''}
+                ${userId ? `<div class="user-id" title="${userId}">ID: ${userId}</div>` : ''}
+            </div>
         </div>
     `;
 }
@@ -533,6 +594,21 @@ function renderRecentActivity(logs) {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
+        // Defensive data extraction
+        const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null') ? null : val;
+
+        const userData = {
+            first_name: getVal(log.first_name),
+            last_name: getVal(log.last_name),
+            username: getVal(log.username),
+            user_id: getVal(log.user_id) || getVal(log.id),
+            photo_url: getVal(log.photo_url) || getVal(log.avatar_url) || getVal(log.profile_photo_url)
+        };
+
+        const userInfo = (userData.user_id || userData.username) 
+            ? formatUserInfo(userData)
+            : '<span style="color: var(--text-dim);">System</span>';
+        
         return `
             <tr>
                 <td class="timestamp" title="${formatDateTime(log.created_at || log.time)}">
@@ -540,18 +616,8 @@ function renderRecentActivity(logs) {
                     <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at || log.time)}</div>
                 </td>
                 <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-                <td>
-                    <div class="user-cell">
-                        <div class="user-avatar" style="width: 32px; height: 32px; font-size: 0.75rem;">
-                            ${(log.username || '?').charAt(0).toUpperCase()}
-                        </div>
-                        <div class="user-details">
-                            <div class="user-name" style="font-size: 0.875rem;">${log.username || 'System'}</div>
-                            <div class="user-username" style="font-size: 0.7rem;">${log.user_id ? String(log.user_id).substring(0, 8) : 'System'}</div>
-                        </div>
-                    </div>
-                </td>
-                <td><div class="details-text" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${log.details || '-'}</div></td>
+                <td>${userInfo}</td>
+                <td><div class="details-text" style="max-width: 400px;">${log.details || '-'}</div></td>
                 <td><span class="action-badge ${log.source === 'ADMIN' ? 'primary' : 'info'}" style="opacity: 0.8;">${log.source || 'USER'}</span></td>
             </tr>
         `;
@@ -1082,13 +1148,15 @@ function renderTransactionsTable() {
         const senderInfo = formatUserInfo({
             first_name: tx.sender_name,
             username: tx.sender_username,
-            user_id: tx.sender_id
+            user_id: tx.sender_id,
+            photo_url: tx.sender_photo_url
         });
 
         const receiverInfo = formatUserInfo({
             first_name: tx.receiver_name,
             username: tx.receiver_username,
-            user_id: tx.receiver_id
+            user_id: tx.receiver_id,
+            photo_url: tx.receiver_photo_url
         });
 
         return `
@@ -1096,12 +1164,12 @@ function renderTransactionsTable() {
             <td>
                 <div style="display: flex; align-items: center; gap: 1rem;">
                     <div style="flex: 1;">${senderInfo}</div>
-                    <div style="color: var(--text-dim);"><i class="fas fa-long-arrow-alt-right"></i></div>
+                    <div style="color: var(--text-dim); flex-shrink: 0;"><i class="fas fa-long-arrow-alt-right fa-lg"></i></div>
                     <div style="flex: 1;">${receiverInfo}</div>
                 </div>
             </td>
             <td>
-                <div style="font-weight: 700; color: var(--success); font-family: monospace;">
+                <div style="font-weight: 700; color: var(--success); font-family: 'JetBrains Mono', monospace; font-size: 1rem;">
                     <i class="fas fa-coins" style="font-size: 0.8rem; opacity: 0.7;"></i> ${new Decimal(tx.amount || 0).toFixed(6)}
                 </div>
             </td>
@@ -1179,14 +1247,15 @@ function renderUserLogsTable() {
             first_name: log.first_name,
             last_name: log.last_name,
             username: log.username,
-            user_id: log.user_id
+            user_id: log.user_id,
+            photo_url: log.photo_url
         });
 
         return `
         <tr>
             <td>${userInfo}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td><div class="details-text" style="max-width: 400px; font-size: 0.8rem; line-height: 1.4;">${parseDetails(log.details)}</div></td>
+            <td><div class="details-text" style="max-width: 450px;">${parseDetails(log.details)}</div></td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>
@@ -1257,24 +1326,27 @@ function renderAdminLogsTable() {
         const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
-        const isCurrentUser = log.admin_id === currentUser?.id;
-        const adminDisplay = isCurrentUser ? 'You' : `Admin ${String(log.admin_id).substring(0, 8)}...`;
+        const adminInfo = formatUserInfo({
+            first_name: log.admin_first_name || (log.admin_id === currentUser?.id ? 'You' : null),
+            username: log.admin_username,
+            user_id: log.admin_id,
+            photo_url: log.admin_photo_url
+        });
 
-        const targetDisplay = log.target_user_id 
-            ? `User ${String(log.target_user_id).substring(0, 8)}...`
-            : '<span style="color: var(--text-dim);">System</span>';
+        const targetInfo = log.target_user_id ? formatUserInfo({
+            first_name: log.target_first_name,
+            last_name: log.target_last_name,
+            username: log.target_username,
+            user_id: log.target_user_id,
+            photo_url: log.target_photo_url
+        }) : '<span style="color: var(--text-dim);">System</span>';
 
         return `
         <tr>
-            <td>
-                <div class="user-info-compact">
-                    <div class="user-name" style="font-size: 0.875rem;">${adminDisplay}</div>
-                    <div class="user-id" style="font-size: 0.7rem; font-family: monospace;">ID: ${String(log.admin_id).substring(0, 8)}...</div>
-                </div>
-            </td>
+            <td>${adminInfo}</td>
             <td><span class="${badgeClass}">${action.icon} ${action.name}</span></td>
-            <td><div style="font-size: 0.875rem; font-weight: 500;">${targetDisplay}</div></td>
-            <td><div class="details-text" style="max-width: 350px; font-size: 0.8rem; line-height: 1.4;">${parseDetails(log.details)}</div></td>
+            <td>${targetInfo}</td>
+            <td><div class="details-text" style="max-width: 400px;">${parseDetails(log.details)}</div></td>
             <td class="timestamp" title="${formatDateTime(log.created_at)}">
                 <div style="font-size: 0.85rem; color: var(--text-secondary);">${formatTimeAgo(log.created_at)}</div>
                 <div style="font-size: 0.7rem; color: var(--text-dim);">${formatDateTime(log.created_at)}</div>

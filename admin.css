@@ -104,8 +104,11 @@ body {
 #admin-panel {
     display: none;
     min-height: 100vh;
-    display: flex;
     flex-direction: column;
+}
+
+#admin-panel.active {
+    display: flex;
 }
 
 .admin-header {
@@ -145,7 +148,18 @@ body {
     flex: 1;
     padding: 2rem;
     background: var(--bg-main);
-    overflow-x: hidden;
+    overflow-x: auto;
+    position: relative;
+    min-width: 0; /* Fix for flexbox child overflow */
+}
+
+.section {
+    display: none;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.section.active {
+    display: block;
 }
 
 /* Components: Buttons */
@@ -579,27 +593,37 @@ body {
 
 /* Details Text Styling */
 .details-text {
-    font-family: monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
     color: var(--text-secondary);
     background: var(--bg-darker);
-    padding: 0.25rem 0.5rem;
+    padding: 0.5rem 0.75rem;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-light);
+    word-break: break-word;
+    white-space: pre-wrap;
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 
-.details-item {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.125rem;
-}
-
-.details-label {
+.user-id {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.7rem;
     color: var(--text-dim);
-    font-weight: 600;
+    background: rgba(0,0,0,0.2);
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    cursor: help;
 }
 
-.details-value {
+.user-id:hover {
     color: var(--text-primary);
+    background: rgba(255,255,255,0.1);
+}
+
+.user-info-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
 /* Maintenance Badge */
