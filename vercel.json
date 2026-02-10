@@ -1,19 +1,19 @@
 {
     "version": 2,
-    "builds": [
-        {
-            "src": "*.html",
-            "use": "@vercel/static"
-        },
-        {
-            "src": "*.js",
-            "use": "@vercel/static"
-        }
-    ],
+    "cleanUrls": true,
+    "trailingSlash": false,
     "routes": [
         {
-            "src": "/(admin.css|admin.js|styles.css)",
-            "dest": "/$1"
+            "src": "/admin.css",
+            "dest": "/admin.css"
+        },
+        {
+            "src": "/admin.js",
+            "dest": "/admin.js"
+        },
+        {
+            "src": "/styles.css",
+            "dest": "/styles.css"
         },
         {
             "src": "/(.*)",
