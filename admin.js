@@ -862,7 +862,7 @@ function setupRealTimePolling() {
     setInterval(() => {
         if (currentUser && document.getElementById('dashboard').classList.contains('active')) {
             loadDashboardStats();
-            loadDashboardActivity();
+            loadRecentActivity();
         }
         
         if (currentUser && document.getElementById('transactions').classList.contains('active')) {
@@ -1470,51 +1470,79 @@ function setupAdvancedSearch(sectionId) {
             if (filterKeys.includes(keyWithColon)) {
                 if (['user:', 'admin:', 'target:', 'sender:', 'receiver:'].includes(keyWithColon)) {
                     if (val.length >= 1) {
-                        autocompleteTimer = setTimeout(() => {
-                            fetchUsersAutocomplete(keyWithColon, val, sectionId);
+                        autocompleteTimer = setTimeout(async () => {
+                            const users = await getUsersAutocomplete(keyWithColon, val, sectionId);
+                            renderSuggestions(users, sectionId);
                         }, 300);
                     } else {
                         hideSuggestions(sectionId);
                     }
                 } else {
-                    showSuggestions(keyWithColon, val, sectionId);
+                    showKeySuggestions(keyWithColon, val, sectionId);
                 }
             } else {
                 hideSuggestions(sectionId);
             }
         } else if (value.trim().length > 0) {
-            showSuggestions('', lastWord, sectionId);
+            const staticItems = getStaticSuggestions(lastWord);
+            
+            if (lastWord.length >= 2) {
+                if (staticItems.length > 0) renderSuggestions(staticItems, sectionId);
+                
+                autocompleteTimer = setTimeout(async () => {
+                    const userItems = await getUsersAutocomplete('user:', lastWord, sectionId);
+                    const combined = [...staticItems, ...userItems];
+                    if (combined.length > 0) {
+                        renderSuggestions(combined, sectionId);
+                    } else {
+                        hideSuggestions(sectionId);
+                    }
+                }, 300);
+            } else {
+                if (staticItems.length > 0) {
+                    renderSuggestions(staticItems, sectionId);
+                } else {
+                    hideSuggestions(sectionId);
+                }
+            }
         } else {
             hideSuggestions(sectionId);
         }
     });
 
-    async function fetchUsersAutocomplete(key, val, sectionId) {
+    async function getUsersAutocomplete(key, val, sectionId) {
         try {
-            const response = await fetch(`${BACKEND_URL}/admin/search-users?query=${encodeURIComponent(val)}&limit=8`, {
+            const response = await fetch(`${BACKEND_URL}/admin/search-users?query=${encodeURIComponent(val)}&limit=5`, {
                 headers: { 'x-admin-secret': ADMIN_SECRET }
             });
             if (!response.ok) throw new Error('Search failed');
             const users = await response.json();
             
-            if (users.length > 0) {
-                const items = users.map(u => ({
-                    label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username || 'no_user'})`.trim(),
-                    value: key + u.user_id,
-                    icon: 'user',
-                    hint: u.user_id
-                }));
-                renderSuggestions(items, sectionId);
-            } else {
-                hideSuggestions(sectionId);
-            }
+            return users.map(u => ({
+                label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username || 'no_user'})`.trim(),
+                value: key + u.user_id,
+                icon: 'user',
+                hint: u.user_id,
+                isUser: true
+            }));
         } catch (e) {
             console.error('Autocomplete error:', e);
-            hideSuggestions(sectionId);
+            return [];
         }
     }
 
+    function getStaticSuggestions(word) {
+        return filterKeys
+            .filter(k => k.startsWith(word))
+            .map(k => ({ label: k, value: k, icon: 'filter', hint: 'Filter' }));
+    }
+
     function renderSuggestions(items, sectionId) {
+        if (items.length === 0) {
+            hideSuggestions(sectionId);
+            return;
+        }
+
         suggestionsContainer.innerHTML = items.map((item, index) => `
             <div class="suggestion-item" data-value="${item.value}">
                 <i class="fas fa-${item.icon}"></i>
@@ -1543,14 +1571,12 @@ function setupAdvancedSearch(sectionId) {
         });
     }
 
-    function showSuggestions(activeKey, activeValue, sectionId) {
+    function showKeySuggestions(activeKey, activeValue, sectionId) {
         let items = [];
-        if (activeKey === '') {
-            items = filterKeys.filter(k => k.startsWith(activeValue)).map(k => ({ label: k, value: k, icon: 'filter', hint: 'Filter' }));
-        } else if (activeKey === 'action:' || activeKey === 'status:') {
+        if (activeKey === 'action:' || activeKey === 'status:') {
             items = actionValues.filter(v => v.startsWith(activeValue)).map(v => ({ label: v, value: activeKey + v, icon: 'tag', hint: activeKey === 'status:' ? 'Status' : 'Action' }));
         } else if (['date:', 'before:', 'after:'].includes(activeKey)) {
-            items = [
+             items = [
                 { label: 'Today', value: activeKey + new Date().toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' },
                 { label: 'Yesterday', value: activeKey + new Date(Date.now() - 86400000).toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' }
             ];
@@ -1566,12 +1592,7 @@ function setupAdvancedSearch(sectionId) {
                 }).open();
             }
         }
-
-        if (items.length > 0) {
-            renderSuggestions(items, sectionId);
-        } else {
-            hideSuggestions(sectionId);
-        }
+        renderSuggestions(items, sectionId);
     }
 
     input.addEventListener('keydown', (e) => {
