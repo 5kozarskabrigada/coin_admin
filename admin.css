@@ -646,6 +646,7 @@ kbd {
 }
 
 .unified-search-bar {
+    position: relative;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
