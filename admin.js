@@ -514,9 +514,18 @@ async function loadDashboardStats() {
 
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
-        document.getElementById('api-status').textContent = 'Offline';
+        let statusText = 'Offline';
+        if (error.message.includes('403')) statusText = 'Auth Failed';
+        else if (error.message.includes('500')) statusText = 'Server Error';
+        else if (error.message.includes('404')) statusText = 'Not Found';
+        
+        document.getElementById('api-status').textContent = statusText;
         document.getElementById('api-status-indicator').className = 'status-indicator';
-        showNotification('Failed to load dashboard data', 'error');
+        
+        // Show detailed error in notification only if it's not just a connection error
+        if (statusText !== 'Offline') {
+             showNotification(`API Error: ${statusText}. Check Render logs.`, 'error');
+        }
     }
 }
 
