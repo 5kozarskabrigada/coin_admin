@@ -410,14 +410,17 @@ function showSection(sectionName, updateHash = true) {
         case 'users':
             loadUsers();
             break;
+        case 'transactions':
+            loadTransactions();
+            break;
+        case 'tasks':
+            loadTasks();
+            break;
         case 'user-logs':
             loadUserLogs();
             break;
         case 'admin-logs':
             loadAdminLogs();
-            break;
-        case 'transactions':
-            loadTransactions();
             break;
     }
 }
@@ -2569,6 +2572,150 @@ window.loadUsers = loadUsers;
 window.loadUserLogs = loadUserLogs;
 window.loadAdminLogs = loadAdminLogs;
 window.loadTransactions = loadTransactions;
+
+// Task Management Functions
+async function loadTasks() {
+    if (!currentUser) return;
+    
+    const tbody = document.getElementById('tasks-tbody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = renderSkeletonRows(7, 5);
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/tasks`, {
+            headers: { 'x-admin-secret': ADMIN_SECRET }
+        });
+
+        if (!response.ok) throw new Error('Failed to load tasks');
+        
+        tasks = await response.json();
+        renderTasksTable();
+
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        tbody.innerHTML = `<tr><td colspan="7" class="error">Error: ${error.message}</td></tr>`;
+    }
+}
+
+function renderTasksTable() {
+    const tbody = document.getElementById('tasks-tbody');
+    if (!tbody) return;
+
+    if (tasks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-muted);">No tasks found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = tasks.map(task => {
+        const rewardDisplay = task.reward_type === 'coins' 
+            ? `${new Decimal(task.reward_amount).toFixed(9)} coins`
+            : '🎁 Present';
+            
+        return `
+        <tr>
+            <td><div style="font-weight: 600;">${escapeHtml(task.title)}</div></td>
+            <td><div style="font-size: 0.85rem; color: var(--text-secondary); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(task.description)}</div></td>
+            <td><span class="badge badge-info">${task.type}</span></td>
+            <td>${task.target_value}</td>
+            <td><span class="text-success">${rewardDisplay}</span></td>
+            <td>
+                <span class="badge ${task.is_active ? 'badge-success' : 'badge-danger'}">
+                    ${task.is_active ? 'Active' : 'Inactive'}
+                </span>
+            </td>
+            <td>
+                <button class="btn btn-outline btn-sm" onclick="deleteTask('${task.id}')" style="color: var(--danger);">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+function showCreateTaskModal() {
+    document.getElementById('create-task-modal').classList.add('active');
+}
+
+async function createTask() {
+    const title = document.getElementById('task-title').value;
+    const description = document.getElementById('task-description').value;
+    const type = document.getElementById('task-type').value;
+    const target = document.getElementById('task-target').value;
+    const rewardType = document.getElementById('task-reward-type').value;
+    const rewardAmount = document.getElementById('task-reward-amount').value;
+    const expiresAt = document.getElementById('task-expires-at').value;
+    const taskUrl = document.getElementById('task-url').value;
+
+    if (!title || !type || !target || !rewardAmount) {
+        showNotification('Please fill in all required fields', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/tasks`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-secret': ADMIN_SECRET
+            },
+            body: JSON.stringify({
+                title,
+                description,
+                type,
+                target_value: parseInt(target),
+                reward_type: rewardType,
+                reward_amount: rewardAmount,
+                expires_at: expiresAt || null,
+                task_url: taskUrl
+            })
+        });
+
+        if (!response.ok) throw new Error('Failed to create task');
+
+        showNotification('Task created successfully', 'success');
+        closeModal('create-task-modal');
+        loadTasks();
+        
+        // Reset form
+        document.getElementById('task-title').value = '';
+        document.getElementById('task-description').value = '';
+        document.getElementById('task-target').value = '';
+        document.getElementById('task-reward-amount').value = '0.000000100';
+        document.getElementById('task-url').value = '';
+
+    } catch (error) {
+        console.error('Error creating task:', error);
+        showNotification(`Failed to create task: ${error.message}`, 'error');
+    }
+}
+
+async function deleteTask(taskId) {
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    try {
+        const response = await fetch(`${BACKEND_URL}/admin/tasks/${taskId}`, {
+            method: 'DELETE',
+            headers: { 'x-admin-secret': ADMIN_SECRET }
+        });
+
+        if (!response.ok) throw new Error('Failed to delete task');
+
+        showNotification('Task deleted successfully', 'success');
+        loadTasks();
+
+    } catch (error) {
+        console.error('Error deleting task:', error);
+        showNotification(`Failed to delete task: ${error.message}`, 'error');
+    }
+}
+
+window.loadTasks = loadTasks;
+window.createTask = createTask;
+window.deleteTask = deleteTask;
+window.showCreateTaskModal = showCreateTaskModal;
+
 window.refreshAllData = refreshAllData;
 window.editUser = editUser;
 window.saveUserChanges = saveUserChanges;
