@@ -515,16 +515,35 @@ async function loadDashboardStats() {
     } catch (error) {
         console.error('Error loading dashboard stats:', error);
         let statusText = 'Offline';
+        let detailMsg = error.message;
+
         if (error.message.includes('403')) statusText = 'Auth Failed';
         else if (error.message.includes('500')) statusText = 'Server Error';
         else if (error.message.includes('404')) statusText = 'Not Found';
+        else if (error.message.includes('Failed to fetch')) statusText = 'Unreachable';
         
         document.getElementById('api-status').textContent = statusText;
-        document.getElementById('api-status-indicator').className = 'status-indicator';
+        document.getElementById('api-status-indicator').className = 'status-indicator ' + (statusText === 'Online' ? 'online' : 'offline');
         
+        // Try to ping the root to see if server is up but auth is failing or endpoint is wrong
+        try {
+            const pingResp = await fetch(`${BACKEND_URL}/`);
+            if (pingResp.ok && statusText === 'Unreachable') {
+                 // Server is up, but /admin/stats failed (likely CORS on that specific route or 404)
+                 document.getElementById('api-status').textContent = 'Connected (API Error)';
+                 showNotification('Server is online, but Admin API failed. Check Secret.', 'warning');
+            } else if (!pingResp.ok) {
+                 // Server returned error on root
+                 console.log('Root ping failed:', pingResp.status);
+            }
+        } catch (pingErr) {
+             console.log('Root ping network error');
+        }
+
         // Show detailed error in notification only if it's not just a connection error
-        if (statusText !== 'Offline') {
-             showNotification(`API Error: ${statusText}. Check Render logs.`, 'error');
+        if (statusText !== 'Online') {
+             // Don't spam notifications on interval, maybe just log to console or show once
+             console.log(`API Error: ${statusText} - ${detailMsg}`);
         }
     }
 }
