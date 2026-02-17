@@ -199,6 +199,7 @@
                                 </tbody>
                             </table>
                         </div>
+                        <div class="pagination" id="tasks-pagination"></div>
                     </div>
                 </div>
 
@@ -206,10 +207,14 @@
                 <div id="users" class="section">
                     <div class="card-header">
                         <h1 class="card-title">User Management</h1>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <input type="text" id="user-search" class="form-control" placeholder="Search users..." style="width: 240px;">
-                            <button class="btn btn-primary btn-sm" id="user-search-btn"><i class="fas fa-search"></i></button>
-                            <button class="btn btn-outline btn-sm" id="export-users-btn"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn btn-outline btn-sm" id="export-users-btn"><i class="fas fa-download"></i> Export</button>
+                    </div>
+                    
+                    <div class="unified-search-container">
+                        <div class="unified-search-bar" id="unified-search-bar-users">
+                            <div class="search-chips" id="search-chips-users"></div>
+                            <input type="text" id="unified-search-input-users" placeholder="Search users... (e.g. status:banned score:1000)" autocomplete="off">
+                            <i class="fas fa-search search-icon"></i>
                         </div>
                     </div>
                     
@@ -276,6 +281,14 @@
                         <button class="btn btn-primary btn-sm" id="create-task-btn"><i class="fas fa-plus"></i> Create Task</button>
                     </div>
                     
+                    <div class="unified-search-container">
+                        <div class="unified-search-bar" id="unified-search-bar-tasks">
+                            <div class="search-chips" id="search-chips-tasks"></div>
+                            <input type="text" id="unified-search-input-tasks" placeholder="Search tasks... (e.g. type:social status:active)" autocomplete="off">
+                            <i class="fas fa-search search-icon"></i>
+                        </div>
+                    </div>
+
                     <div class="content-card">
                         <div class="table-responsive">
                             <table class="data-table">

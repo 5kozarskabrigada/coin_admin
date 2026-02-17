@@ -215,6 +215,8 @@ async function initAdminPanel() {
         setupAdvancedSearch('userLogs');
         setupAdvancedSearch('adminLogs');
         setupAdvancedSearch('transactions');
+        setupAdvancedSearch('tasks');
+        setupAdvancedSearch('users');
         setupRealTimePolling();
         
         await checkMaintenanceMode();
@@ -742,7 +744,10 @@ function renderRecentActivity(logs) {
 async function loadUsers(page = 1) {
     if (!currentUser) return;
     
-    const searchTerm = document.getElementById('global-search')?.value || document.getElementById('user-search')?.value || '';
+    const input = document.getElementById('unified-search-input-users');
+    const searchTerm = input?.value || document.getElementById('global-search')?.value || '';
+    const filters = searchChips.users || [];
+    
     const tbody = document.getElementById('users-tbody');
     
     if (!tbody) return;
@@ -753,8 +758,9 @@ async function loadUsers(page = 1) {
         const url = new URL(`${BACKEND_URL}/admin/users`);
         url.searchParams.set('page', page);
         url.searchParams.set('limit', itemsPerPage);
-        if (searchTerm) {
-            url.searchParams.set('search', searchTerm);
+        
+        if (searchTerm || filters.length > 0) {
+            url.searchParams.set('search', JSON.stringify({ freeText: searchTerm, filters }));
         }
 
         const response = await fetch(url, {
@@ -1458,258 +1464,299 @@ function renderTransactionsTable(searchTerm = '') {
 let searchChips = {
     userLogs: [],
     adminLogs: [],
-    transactions: []
+    transactions: [],
+    tasks: []
 };
 
 function setupAdvancedSearch(sectionId) {
     const isUIAdmin = sectionId === 'adminLogs';
     const isTransactions = sectionId === 'transactions';
+    const isTasks = sectionId === 'tasks';
+    const isUsers = sectionId === 'users';
     
     let inputId = `unified-search-input${isUIAdmin ? '-admin' : ''}`;
     let barId = `unified-search-bar${isUIAdmin ? '-admin' : ''}`;
     let chipsId = `search-chips${isUIAdmin ? '-admin' : ''}`;
-    let suggestionsId = `search-suggestions${isUIAdmin ? '-admin' : ''}`;
 
     if (isTransactions) {
         inputId = 'unified-search-input-transactions';
         barId = 'unified-search-bar-transactions';
         chipsId = 'search-chips-transactions';
-        suggestionsId = 'search-suggestions-transactions';
+    } else if (isTasks) {
+        inputId = 'unified-search-input-tasks';
+        barId = 'unified-search-bar-tasks';
+        chipsId = 'search-chips-tasks';
+    } else if (isUsers) {
+        inputId = 'unified-search-input-users';
+        barId = 'unified-search-bar-users';
+        chipsId = 'search-chips-users';
     }
 
     const input = document.getElementById(inputId);
     const bar = document.getElementById(barId);
     const chipsContainer = document.getElementById(chipsId);
-    const suggestionsContainer = document.getElementById(suggestionsId);
 
     if (!input || !bar) return;
 
-    let filterKeys = [];
-    if (isUIAdmin) {
-        filterKeys = ['admin:', 'target:', 'action:', 'date:', 'before:', 'after:'];
-    } else if (isTransactions) {
-        filterKeys = ['user:', 'sender:', 'receiver:', 'status:', 'date:', 'before:', 'after:'];
-    } else {
-        filterKeys = ['user:', 'action:', 'date:', 'before:', 'after:'];
-    }
+    // Create Dropdown Structure
+    const dropdown = document.createElement('div');
+    dropdown.className = 'search-menu-dropdown';
+    dropdown.innerHTML = `
+        <div class="search-menu-categories"></div>
+        <div class="search-menu-options"></div>
+    `;
+    bar.appendChild(dropdown);
 
-    let actionValues = [];
-    if (isUIAdmin) {
-        actionValues = ['update_user', 'ban_user', 'unban_user', 'add_coins', 'reset_score', 'delete_user', 'send_broadcast', 'enable_maintenance', 'disable_maintenance'];
-    } else if (isTransactions) {
-        actionValues = ['success', 'pending', 'failed'];
-    } else {
-        actionValues = ['login', 'click', 'upgrade_purchase', 'solo_lottery_win', 'coin_transfer', 'coin_received'];
-    }
+    const categoriesContainer = dropdown.querySelector('.search-menu-categories');
+    const optionsContainer = dropdown.querySelector('.search-menu-options');
 
-    let selectedSuggestionIndex = -1;
+    // Configuration
+    const config = {
+        categories: [
+            { id: 'filters', label: 'Filters', icon: 'filter' },
+            { id: 'users', label: 'Users', icon: 'users' },
+            { id: 'date', label: 'Date', icon: 'calendar' }
+        ],
+        filters: {
+            users: [
+                { label: 'Status: Banned', value: 'status:banned', hint: 'Filter' },
+                { label: 'Status: Active', value: 'status:active', hint: 'Filter' },
+                { label: 'Status: Admin', value: 'status:admin', hint: 'Filter' },
+                { label: 'Score > 1000', value: 'score:1000', hint: 'Filter' }
+            ],
+            userLogs: [
+                { label: 'Action: Login', value: 'action:login', hint: 'Filter' },
+                { label: 'Action: Click', value: 'action:click', hint: 'Filter' },
+                { label: 'Action: Upgrade', value: 'action:upgrade_purchase', hint: 'Filter' }
+            ],
+            adminLogs: [
+                { label: 'Action: Ban', value: 'action:ban_user', hint: 'Filter' },
+                { label: 'Action: Unban', value: 'action:unban_user', hint: 'Filter' },
+                { label: 'Action: Add Coins', value: 'action:add_coins', hint: 'Filter' }
+            ],
+            transactions: [
+                { label: 'Status: Success', value: 'status:success', hint: 'Filter' },
+                { label: 'Status: Pending', value: 'status:pending', hint: 'Filter' },
+                { label: 'Status: Failed', value: 'status:failed', hint: 'Filter' }
+            ],
+            tasks: [
+                { label: 'Type: Social', value: 'type:manual', hint: 'Filter' },
+                { label: 'Type: Clicks', value: 'type:clicks', hint: 'Filter' },
+                { label: 'Status: Active', value: 'status:active', hint: 'Filter' },
+                { label: 'Status: Inactive', value: 'status:inactive', hint: 'Filter' }
+            ]
+        }
+    };
+
+    let activeCategory = 'filters';
     let autocompleteTimer = null;
 
-    bar.addEventListener('click', () => input.focus());
+    // Event Listeners
+    bar.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-chip') && !e.target.closest('.chip-remove')) {
+            input.focus();
+            dropdown.classList.add('active');
+            renderCategories();
+            renderOptions();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!bar.contains(e.target)) {
+            dropdown.classList.remove('active');
+        }
+    });
 
     input.addEventListener('input', (e) => {
-        const value = e.target.value;
-        const lastWord = value.split(' ').pop();
-        
-        clearTimeout(autocompleteTimer);
-        
-        if (lastWord.includes(':')) {
-            const [key, val] = lastWord.split(':');
-            const keyWithColon = key + ':';
-            
-            if (filterKeys.includes(keyWithColon)) {
-                if (['user:', 'admin:', 'target:', 'sender:', 'receiver:'].includes(keyWithColon)) {
-                    if (val.length >= 1) {
-                        autocompleteTimer = setTimeout(async () => {
-                            const users = await getUsersAutocomplete(keyWithColon, val, sectionId);
-                            renderSuggestions(users, sectionId);
-                        }, 300);
-                    } else {
-                        // Show recent or random users if empty? For now just hide or show nothing
-                        // Maybe fetch recent users?
-                        hideSuggestions(sectionId);
-                    }
-                } else {
-                    showKeySuggestions(keyWithColon, val, sectionId);
-                }
+        const val = e.target.value;
+        if (val.length > 0) {
+            dropdown.classList.add('active');
+            if (val.includes(':')) {
+                // If typing filter manually, switch to relevant category if possible
+                // For now just keep current category
             } else {
-                hideSuggestions(sectionId);
-            }
-        } else if (value.trim().length > 0) {
-            const staticItems = getStaticSuggestions(lastWord);
-            
-            if (lastWord.length >= 1) {
-                if (staticItems.length > 0) renderSuggestions(staticItems, sectionId);
-                
-                autocompleteTimer = setTimeout(async () => {
-                    const userItems = await getUsersAutocomplete('user:', lastWord, sectionId);
-                    const combined = [...staticItems, ...userItems];
-                    if (combined.length > 0) {
-                        renderSuggestions(combined, sectionId);
-                    } else {
-                        hideSuggestions(sectionId);
-                    }
-                }, 300);
-            } else {
-                if (staticItems.length > 0) {
-                    renderSuggestions(staticItems, sectionId);
-                } else {
-                    hideSuggestions(sectionId);
+                // If just typing text, maybe switch to Users or just filter current options
+                if (activeCategory === 'filters') {
+                    renderOptions(val);
+                } else if (activeCategory === 'users') {
+                    clearTimeout(autocompleteTimer);
+                    autocompleteTimer = setTimeout(() => {
+                        fetchUserSuggestions(val);
+                    }, 300);
                 }
             }
         } else {
-            hideSuggestions(sectionId);
+            renderOptions();
         }
     });
-
-    async function getUsersAutocomplete(key, val, sectionId) {
-        try {
-            const response = await fetch(`${BACKEND_URL}/admin/search-users?query=${encodeURIComponent(val)}&limit=5`, {
-                headers: { 'x-admin-secret': ADMIN_SECRET }
-            });
-            if (!response.ok) throw new Error('Search failed');
-            const users = await response.json();
-            
-            return users.map(u => ({
-                label: `${u.first_name || ''} ${u.last_name || ''} (@${u.username || 'no_user'})`.trim(),
-                value: key + u.user_id,
-                icon: 'user',
-                hint: u.user_id,
-                isUser: true
-            }));
-        } catch (e) {
-            console.error('Autocomplete error:', e);
-            return [];
-        }
-    }
-
-    function getStaticSuggestions(word) {
-        return filterKeys
-            .filter(k => k.startsWith(word))
-            .map(k => ({ label: k, value: k, icon: 'filter', hint: 'Filter' }));
-    }
-
-    function renderSuggestions(items, sectionId) {
-        if (items.length === 0) {
-            hideSuggestions(sectionId);
-            return;
-        }
-
-        suggestionsContainer.innerHTML = items.map((item, index) => `
-            <div class="suggestion-item" data-value="${item.value}">
-                <i class="fas fa-${item.icon}"></i>
-                <span class="suggestion-label">${item.label}</span>
-                <span class="suggestion-hint">${item.hint}</span>
-            </div>
-        `).join('');
-        
-        suggestionsContainer.classList.add('active');
-        
-        suggestionsContainer.querySelectorAll('.suggestion-item').forEach(item => {
-            item.addEventListener('click', () => {
-                const val = item.getAttribute('data-value');
-                if (val.endsWith(':')) {
-                    input.value = val;
-                    input.focus();
-                } else {
-                    const parts = val.split(':');
-                    const k = parts[0] + ':';
-                    const v = parts.slice(1).join(':');
-                    addChip(k, v, sectionId);
-                    input.value = '';
-                }
-                hideSuggestions(sectionId);
-            });
-        });
-    }
-
-    function showKeySuggestions(activeKey, activeValue, sectionId) {
-        let items = [];
-        if (activeKey === 'action:' || activeKey === 'status:') {
-            items = actionValues.filter(v => v.startsWith(activeValue)).map(v => ({ label: v, value: activeKey + v, icon: 'tag', hint: activeKey === 'status:' ? 'Status' : 'Action' }));
-        } else if (['date:', 'before:', 'after:'].includes(activeKey)) {
-             items = [
-                { label: 'Today', value: activeKey + new Date().toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' },
-                { label: 'Yesterday', value: activeKey + new Date(Date.now() - 86400000).toISOString().split('T')[0], icon: 'calendar-day', hint: 'Date' }
-            ];
-            
-            if (!input._flatpickr) {
-                flatpickr(input, {
-                    onChange: (selectedDates, dateStr) => {
-                        addChip(activeKey, dateStr, sectionId);
-                        input.value = '';
-                        input._flatpickr.destroy();
-                        input._flatpickr = null;
-                    }
-                }).open();
-            }
-        }
-        renderSuggestions(items, sectionId);
-    }
 
     input.addEventListener('keydown', (e) => {
-        const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
-        
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            selectedSuggestionIndex = Math.min(selectedSuggestionIndex + 1, suggestions.length - 1);
-            updateSelectedSuggestion(suggestions);
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            selectedSuggestionIndex = Math.max(selectedSuggestionIndex - 1, 0);
-            updateSelectedSuggestion(suggestions);
-        } else if (e.key === 'Enter') {
-            if (selectedSuggestionIndex >= 0 && suggestions[selectedSuggestionIndex]) {
-                e.preventDefault();
-                suggestions[selectedSuggestionIndex].click();
-            } else {
-                if (sectionId === 'userLogs') loadUserLogs(1);
-                else if (sectionId === 'adminLogs') loadAdminLogs(1);
-                else if (sectionId === 'transactions') loadTransactions(1);
-            }
-        } else if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId].length > 0) {
+        if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId].length > 0) {
             removeChip(searchChips[sectionId].length - 1, sectionId);
+        } else if (e.key === 'Enter') {
+            dropdown.classList.remove('active');
+            triggerSearch();
         }
     });
 
-    function hideSuggestions(sectionId) {
-        suggestionsContainer.classList.remove('active');
-        selectedSuggestionIndex = -1;
+    function renderCategories() {
+        categoriesContainer.innerHTML = config.categories.map(cat => `
+            <div class="menu-category-item ${activeCategory === cat.id ? 'active' : ''}" data-id="${cat.id}">
+                <i class="fas fa-${cat.icon}"></i> ${cat.label}
+            </div>
+        `).join('');
+
+        categoriesContainer.querySelectorAll('.menu-category-item').forEach(item => {
+            item.addEventListener('click', () => {
+                activeCategory = item.dataset.id;
+                renderCategories();
+                renderOptions();
+                input.focus();
+            });
+        });
     }
 
-    function updateSelectedSuggestion(suggestions) {
-        suggestions.forEach((s, i) => {
-            if (i === selectedSuggestionIndex) {
-                s.classList.add('selected');
-                s.scrollIntoView({ block: 'nearest' });
-            } else {
-                s.classList.remove('selected');
+    function renderOptions(filterText = '') {
+        optionsContainer.innerHTML = '';
+        
+        if (activeCategory === 'filters') {
+            const filters = config.filters[sectionId] || [];
+            const filtered = filterText 
+                ? filters.filter(f => f.label.toLowerCase().includes(filterText.toLowerCase()))
+                : filters;
+            
+            if (filtered.length === 0) {
+                optionsContainer.innerHTML = '<div style="padding: 1rem; color: var(--text-dim); text-align: center;">No filters found</div>';
+                return;
             }
-        });
+
+            filtered.forEach(opt => {
+                const el = document.createElement('div');
+                el.className = 'menu-option-item';
+                el.innerHTML = `
+                    <div class="menu-option-label">${opt.label}</div>
+                    <div class="menu-option-hint">${opt.hint}</div>
+                `;
+                el.addEventListener('click', () => {
+                    const [key, val] = opt.value.split(':');
+                    addChip(key + ':', val, sectionId);
+                    input.value = '';
+                    dropdown.classList.remove('active');
+                });
+                optionsContainer.appendChild(el);
+            });
+        } else if (activeCategory === 'users') {
+            optionsContainer.innerHTML = '<div style="padding: 1rem; color: var(--text-dim); text-align: center;">Type to search users...</div>';
+            if (filterText) {
+                fetchUserSuggestions(filterText);
+            }
+        } else if (activeCategory === 'date') {
+            const dates = [
+                { label: 'Today', value: new Date().toISOString().split('T')[0] },
+                { label: 'Yesterday', value: new Date(Date.now() - 86400000).toISOString().split('T')[0] }
+            ];
+            
+            dates.forEach(d => {
+                const el = document.createElement('div');
+                el.className = 'menu-option-item';
+                el.innerHTML = `<div class="menu-option-label">${d.label}</div>`;
+                el.addEventListener('click', () => {
+                    addChip('date:', d.value, sectionId);
+                    dropdown.classList.remove('active');
+                });
+                optionsContainer.appendChild(el);
+            });
+            
+            // Custom date picker trigger
+            const custom = document.createElement('div');
+            custom.className = 'menu-option-item';
+            custom.innerHTML = '<div class="menu-option-label">Custom Range...</div>';
+            custom.addEventListener('click', () => {
+                 if (!input._flatpickr) {
+                    flatpickr(input, {
+                        onChange: (selectedDates, dateStr) => {
+                            addChip('date:', dateStr, sectionId);
+                            input.value = '';
+                            input._flatpickr.destroy();
+                            input._flatpickr = null;
+                        }
+                    }).open();
+                }
+            });
+            optionsContainer.appendChild(custom);
+        }
+    }
+
+    async function fetchUserSuggestions(query) {
+        optionsContainer.innerHTML = '<div style="padding: 1rem; text-align: center;"><i class="fas fa-spinner fa-spin"></i> Searching...</div>';
+        
+        try {
+            const response = await fetch(`${BACKEND_URL}/admin/search-users?query=${encodeURIComponent(query)}&limit=5`, {
+                headers: { 'x-admin-secret': ADMIN_SECRET }
+            });
+            const users = await response.json();
+            
+            optionsContainer.innerHTML = '';
+            if (users.length === 0) {
+                optionsContainer.innerHTML = '<div style="padding: 1rem; color: var(--text-dim); text-align: center;">No users found</div>';
+                return;
+            }
+            
+            users.forEach(u => {
+                const el = document.createElement('div');
+                el.className = 'menu-option-item';
+                el.innerHTML = `
+                    <div class="user-search-result">
+                        <div class="user-search-avatar">
+                            ${u.profile_photo_url ? `<img src="${u.profile_photo_url}" style="width:100%;height:100%;border-radius:50%;">` : (u.username || '?')[0].toUpperCase()}
+                        </div>
+                        <div class="user-search-info">
+                            <span class="user-search-name">${u.first_name || ''} ${u.last_name || ''}</span>
+                            <span class="user-search-username">@${u.username || 'no_username'}</span>
+                        </div>
+                    </div>
+                `;
+                el.addEventListener('click', () => {
+                    addChip('user:', u.user_id, sectionId);
+                    input.value = '';
+                    dropdown.classList.remove('active');
+                });
+                optionsContainer.appendChild(el);
+            });
+            
+        } catch (e) {
+            console.error('Search error', e);
+            optionsContainer.innerHTML = '<div style="padding: 1rem; color: var(--danger); text-align: center;">Error searching users</div>';
+        }
     }
 
     function addChip(key, value, sectionId) {
         if (!searchChips[sectionId]) searchChips[sectionId] = [];
         searchChips[sectionId].push({ key, value });
         renderChips(sectionId);
-        if (sectionId === 'userLogs') loadUserLogs(1);
-        else if (sectionId === 'adminLogs') loadAdminLogs(1);
-        else if (sectionId === 'transactions') loadTransactions(1);
+        triggerSearch();
     }
 
     window.removeChip = (index, sectionId) => {
         searchChips[sectionId].splice(index, 1);
         renderChips(sectionId);
+        triggerSearch();
+    };
+    
+    function triggerSearch() {
         if (sectionId === 'userLogs') loadUserLogs(1);
         else if (sectionId === 'adminLogs') loadAdminLogs(1);
         else if (sectionId === 'transactions') loadTransactions(1);
-    };
+        else if (sectionId === 'tasks') loadTasks(1);
+        else if (sectionId === 'users') loadUsers(1);
+    }
 }
 
 function renderChips(sectionId) {
     const isUIAdmin = sectionId === 'adminLogs';
     const isTransactions = sectionId === 'transactions';
-    const chipContainerId = isUIAdmin ? 'search-chips-admin' : (isTransactions ? 'search-chips-transactions' : 'search-chips');
+    const isTasks = sectionId === 'tasks';
+    const chipContainerId = isUIAdmin ? 'search-chips-admin' : (isTransactions ? 'search-chips-transactions' : (isTasks ? 'search-chips-tasks' : 'search-chips'));
     const container = document.getElementById(chipContainerId);
     if (!container) return;
     container.innerHTML = (searchChips[sectionId] || []).map((chip, index) => `
@@ -2556,8 +2603,12 @@ window.loadAdminLogs = loadAdminLogs;
 window.loadTransactions = loadTransactions;
 
 // Task Management Functions
-async function loadTasks() {
+async function loadTasks(page = 1) {
     if (!currentUser) return;
+    
+    const input = document.getElementById('unified-search-input-tasks');
+    const freeText = input?.value || '';
+    const filters = searchChips.tasks || [];
     
     const tbody = document.getElementById('tasks-tbody');
     if (!tbody) return;
@@ -2565,7 +2616,12 @@ async function loadTasks() {
     tbody.innerHTML = renderSkeletonRows(7, 5);
 
     try {
-        const response = await fetch(`${BACKEND_URL}/admin/tasks`, {
+        const url = new URL(`${BACKEND_URL}/admin/tasks`);
+        url.searchParams.set('page', page);
+        url.searchParams.set('limit', 15);
+        url.searchParams.set('search', JSON.stringify({ freeText, filters }));
+
+        const response = await fetch(url, {
             headers: { 'x-admin-secret': ADMIN_SECRET }
         });
 
@@ -2574,8 +2630,12 @@ async function loadTasks() {
             throw new Error(`Failed to load tasks: ${response.status} ${response.statusText} - ${errorText}`);
         }
         
-        tasks = await response.json();
+        const data = await response.json();
+        tasks = data.tasks || [];
+        currentPage.tasks = page;
+        
         renderTasksTable();
+        renderPagination('tasks', data.totalCount || 0, page);
 
     } catch (error) {
         console.error('Error loading tasks:', error);
