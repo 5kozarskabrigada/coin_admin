@@ -498,14 +498,20 @@ async function loadDashboardStats() {
         const data = await response.json();
 
         document.getElementById('total-users').textContent = data.totalUsers || 0;
-        document.getElementById('active-today').textContent = data.activeToday || 0;
+        document.getElementById('active-today').textContent = (data.activeToday || 0) + ' active today';
         document.getElementById('banned-users').textContent = data.bannedUsers || 0;
         document.getElementById('total-transactions').textContent = data.totalTransactions || 0;
         document.getElementById('total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
 
-        document.getElementById('sidebar-total-users').textContent = data.totalUsers || 0;
-        document.getElementById('sidebar-total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
-        document.getElementById('sidebar-active-today').textContent = data.activeToday || 0;
+        if (document.getElementById('sidebar-total-users')) {
+            document.getElementById('sidebar-total-users').textContent = data.totalUsers || 0;
+        }
+        if (document.getElementById('sidebar-total-coins')) {
+            document.getElementById('sidebar-total-coins').textContent = new Decimal(data.totalCoins || 0).toFixed(2);
+        }
+        if (document.getElementById('sidebar-active-today')) {
+            document.getElementById('sidebar-active-today').textContent = data.activeToday || 0;
+        }
 
         document.getElementById('api-status').textContent = 'Online';
         document.getElementById('api-status-indicator').className = 'status-indicator online';
