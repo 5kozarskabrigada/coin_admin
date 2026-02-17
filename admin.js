@@ -1,6 +1,7 @@
 const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
-const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
+// const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
+const BACKEND_URL = 'http://localhost:3000';
 const ADMIN_SECRET = 'sisi-clicker-admin-secret-2024';
 
 let supabaseClient = null;
