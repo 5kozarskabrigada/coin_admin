@@ -241,7 +241,7 @@ async function checkAuth() {
             showAdminPanel();
             
             const initialHash = window.location.hash.replace('#', '');
-            if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
+            if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs', 'settings', 'tasks'].includes(initialHash)) {
                 showSection(initialHash, false);
             } else {
                 showSection('dashboard');
@@ -276,7 +276,7 @@ async function checkAuth() {
             showAdminPanel();
             
             const initialHash = window.location.hash.replace('#', '');
-            if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
+            if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs', 'settings', 'tasks'].includes(initialHash)) {
                 showSection(initialHash, false);
             } else {
                 showSection('dashboard');
@@ -339,7 +339,7 @@ async function login() {
         showAdminPanel();
         
         const initialHash = window.location.hash.replace('#', '');
-        if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(initialHash)) {
+        if (initialHash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs', 'settings', 'tasks'].includes(initialHash)) {
             showSection(initialHash, false);
         } else {
             showSection('dashboard');
@@ -422,12 +422,14 @@ function showSection(sectionName, updateHash = true) {
         case 'admin-logs':
             loadAdminLogs();
             break;
+        case 'settings':
+            break;
     }
 }
 
 window.addEventListener('hashchange', () => {
     const hash = window.location.hash.replace('#', '');
-    if (hash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs'].includes(hash)) {
+    if (hash && ['dashboard', 'users', 'transactions', 'user-logs', 'admin-logs', 'settings', 'tasks'].includes(hash)) {
         showSection(hash, false);
     }
 });
@@ -2116,27 +2118,6 @@ let quickSearchResults = [];
 let selectedSearchIndex = -1;
 
 function setupEventListeners() {
-    document.addEventListener('keydown', (e) => {
-        if (e.ctrlKey && e.key === 'k') {
-            e.preventDefault();
-            toggleQuickSearch(true);
-        } else if (e.key === 'Escape') {
-            toggleQuickSearch(false);
-        } else if (document.getElementById('quick-search-overlay').classList.contains('active')) {
-            handleQuickSearchKeydown(e);
-        }
-    });
-
-    document.getElementById('quick-search-overlay')?.addEventListener('click', (e) => {
-        if (e.target === document.getElementById('quick-search-overlay')) {
-            toggleQuickSearch(false);
-        }
-    });
-
-    document.getElementById('quick-search-input')?.addEventListener('input', debounce((e) => {
-        handleQuickSearch(e.target.value);
-    }, 200));
-
     document.getElementById('global-search')?.addEventListener('input', debounce((e) => {
         handleGlobalSearch(e.target.value);
     }, 300));
@@ -2171,6 +2152,7 @@ function setupEventListeners() {
     document.getElementById('tasks-nav')?.addEventListener('click', () => showSection('tasks'));
     document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
     document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
+    document.getElementById('settings-nav')?.addEventListener('click', () => showSection('settings'));
     
     document.getElementById('logout-button')?.addEventListener('click', logout);
     
@@ -2587,7 +2569,10 @@ async function loadTasks() {
             headers: { 'x-admin-secret': ADMIN_SECRET }
         });
 
-        if (!response.ok) throw new Error('Failed to load tasks');
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to load tasks: ${response.status} ${response.statusText} - ${errorText}`);
+        }
         
         tasks = await response.json();
         renderTasksTable();
