@@ -795,6 +795,8 @@ async function loadUsers(page = 1) {
         const url = new URL(`${BACKEND_URL}/admin/users`);
         url.searchParams.set('page', page);
         url.searchParams.set('limit', itemsPerPage);
+        url.searchParams.set('sortBy', sortConfig.users.field);
+        url.searchParams.set('order', sortConfig.users.direction);
         
         if (searchTerm || filters.length > 0) {
             url.searchParams.set('search', JSON.stringify({ freeText: searchTerm, filters }));
@@ -1422,6 +1424,8 @@ async function loadTransactions(page = 1) {
         const url = new URL(`${BACKEND_URL}/admin/transaction-details`);
         url.searchParams.set('page', page);
         url.searchParams.set('limit', 15);
+        url.searchParams.set('sortBy', sortConfig.transactions.field);
+        url.searchParams.set('order', sortConfig.transactions.direction);
         url.searchParams.set('search', JSON.stringify({ freeText, filters }));
 
         const response = await fetch(url, {
@@ -2656,6 +2660,8 @@ async function loadTasks(page = 1) {
         const url = new URL(`${BACKEND_URL}/admin/tasks`);
         url.searchParams.set('page', page);
         url.searchParams.set('limit', 15);
+        url.searchParams.set('sortBy', sortConfig.tasks.field);
+        url.searchParams.set('order', sortConfig.tasks.direction);
         url.searchParams.set('search', JSON.stringify({ freeText, filters }));
 
         const response = await fetch(url, {
@@ -2800,5 +2806,7 @@ window.showCreateTaskModal = showCreateTaskModal;
 
 window.refreshAllData = refreshAllData;
 window.editUser = editUser;
+window.saveUserChanges = saveUserChanges;
+window.closeModal = closeModal;
 window.saveUserChanges = saveUserChanges;
 window.closeModal = closeModal;
