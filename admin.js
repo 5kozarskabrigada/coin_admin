@@ -3,10 +3,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // const BACKEND_URL = 'https://si-backend-2i9b.onrender.com';
 const BACKEND_URL = 'http://localhost:3000';
 const ADMIN_SECRET = 'sisi-clicker-admin-secret-2024';
-const adminSecret = localStorage.getItem('admin_secret');
-if (adminSecret && adminSecret !== ADMIN_SECRET) {
-    localStorage.removeItem('admin_secret');
-}
 
 let supabaseClient = null;
 let currentUser = null;
@@ -242,7 +238,7 @@ async function checkAuth() {
 
     try {
         const adminSecret = localStorage.getItem('admin_secret');
-        if (adminSecret === 'sisi-clicker-admin-secret-2024') {
+        if (adminSecret === ADMIN_SECRET) {
             currentUser = { id: 'admin-panel', email: 'admin@system.local' };
             document.getElementById('admin-name').textContent = 'Administrator';
             showAdminPanel();
@@ -308,8 +304,8 @@ async function login() {
     try {
         errorElement.style.display = 'none';
 
-        if (email === 'admin@system.local' && password === 'sisi-clicker-admin-secret-2024') {
-            localStorage.setItem('admin_secret', 'sisi-clicker-admin-secret-2024');
+        if (email === 'admin@system.local' && password === ADMIN_SECRET) {
+            localStorage.setItem('admin_secret', ADMIN_SECRET);
             currentUser = { id: 'admin-panel', email: 'admin@system.local' };
             document.getElementById('admin-name').textContent = 'Administrator';
             showAdminPanel();
