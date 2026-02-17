@@ -10,20 +10,23 @@ let users = [];
 let userLogs = [];
 let adminLogs = [];
 let transactions = [];
+let tasks = [];
 
 const itemsPerPage = 15;
 let currentPage = {
     users: 1,
     userLogs: 1,
     adminLogs: 1,
-    transactions: 1
+    transactions: 1,
+    tasks: 1
 };
 
 let sortConfig = {
     users: { field: 'user_id', direction: 'asc' },
     userLogs: { field: 'created_at', direction: 'desc' },
     adminLogs: { field: 'created_at', direction: 'desc' },
-    transactions: { field: 'created_at', direction: 'desc' }
+    transactions: { field: 'created_at', direction: 'desc' },
+    tasks: { field: 'created_at', direction: 'desc' }
 };
 
 let currentEditingUserId = null;
@@ -2162,6 +2165,7 @@ function setupEventListeners() {
     document.getElementById('dashboard-nav')?.addEventListener('click', () => showSection('dashboard'));
     document.getElementById('users-nav')?.addEventListener('click', () => showSection('users'));
     document.getElementById('transactions-nav')?.addEventListener('click', () => showSection('transactions'));
+    document.getElementById('tasks-nav')?.addEventListener('click', () => showSection('tasks'));
     document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
     document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
     
@@ -2196,6 +2200,12 @@ function setupEventListeners() {
     document.getElementById('close-add-coins-all-modal')?.addEventListener('click', () => closeModal('add-coins-all-modal'));
     document.getElementById('close-broadcast-modal')?.addEventListener('click', () => closeModal('broadcast-modal'));
     document.getElementById('close-maintenance-modal')?.addEventListener('click', () => closeModal('maintenance-modal'));
+
+    // Task Events
+    document.getElementById('create-task-btn')?.addEventListener('click', showCreateTaskModal);
+    document.getElementById('close-create-task-modal')?.addEventListener('click', () => closeModal('create-task-modal'));
+    document.getElementById('cancel-create-task')?.addEventListener('click', () => closeModal('create-task-modal'));
+    document.getElementById('confirm-create-task')?.addEventListener('click', createTask);
     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
