@@ -400,7 +400,7 @@ function showSection(sectionName, updateHash = true) {
     }
 
     if (updateHash) {
-        window.location.hash = sectionName;
+        history.replaceState(null, null, '#' + sectionName);
     }
 
     switch (sectionName) {
