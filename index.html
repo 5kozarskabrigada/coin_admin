@@ -592,6 +592,22 @@
         </div>
     </div>
 
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="card-title" id="confirmation-title">Confirmation</h3>
+                <button class="btn btn-outline btn-sm" id="close-confirmation-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmation-message" style="margin-bottom: 1.5rem; color: var(--text-secondary);">Are you sure you want to proceed?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="confirm-action-btn">Confirm</button>
+                <button class="btn btn-outline" id="cancel-action-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="admin.js"></script>
 </body>

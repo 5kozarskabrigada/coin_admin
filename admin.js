@@ -693,30 +693,72 @@ function formatUserInfo(user) {
     `;
 }
 
+let confirmationCallback = null;
+
+function showConfirmationModal(title, message, onConfirm, type = 'danger', confirmText = 'Confirm') {
+    const modal = document.getElementById('confirmation-modal');
+    const titleEl = document.getElementById('confirmation-title');
+    const messageEl = document.getElementById('confirmation-message');
+    const confirmBtn = document.getElementById('confirm-action-btn');
+    
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    confirmBtn.textContent = confirmText;
+    
+    // Reset classes
+    confirmBtn.className = 'btn';
+    if (type === 'danger') confirmBtn.classList.add('btn-danger');
+    else if (type === 'warning') confirmBtn.classList.add('btn-warning');
+    else if (type === 'success') confirmBtn.classList.add('btn-success');
+    else confirmBtn.classList.add('btn-primary');
+    
+    confirmationCallback = onConfirm;
+    modal.classList.add('active');
+}
+
+function closeConfirmationModal() {
+    const modal = document.getElementById('confirmation-modal');
+    modal.classList.remove('active');
+    confirmationCallback = null;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('close-confirmation-modal')?.addEventListener('click', closeConfirmationModal);
+    document.getElementById('cancel-action-btn')?.addEventListener('click', closeConfirmationModal);
+    document.getElementById('confirm-action-btn')?.addEventListener('click', () => {
+        if (confirmationCallback) confirmationCallback();
+        closeConfirmationModal();
+    });
+});
+
 async function deleteLog(type, logId) {
-    if (!confirm(`Are you sure you want to delete this ${type === 'userLogs' ? 'user' : 'admin'} log entry? This action cannot be undone.`)) {
-        return;
-    }
+    showConfirmationModal(
+        'Delete Log Entry', 
+        `Are you sure you want to delete this ${type === 'userLogs' ? 'user' : 'admin'} log entry? This action cannot be undone.`,
+        async () => {
+            try {
+                const endpoint = type === 'userLogs' ? `/admin/user-logs/${logId}` : `/admin/admin-logs/${logId}`;
+                const response = await fetch(`${BACKEND_URL}${endpoint}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'x-admin-secret': ADMIN_SECRET
+                    }
+                });
 
-    try {
-        const endpoint = type === 'userLogs' ? `/admin/user-logs/${logId}` : `/admin/admin-logs/${logId}`;
-        const response = await fetch(`${BACKEND_URL}${endpoint}`, {
-            method: 'DELETE',
-            headers: {
-                'x-admin-secret': ADMIN_SECRET
+                if (!response.ok) throw new Error('Failed to delete log entry');
+
+                showNotification('Log entry deleted successfully', 'success');
+                if (type === 'userLogs') loadUserLogs(currentPage.userLogs);
+                else loadAdminLogs(currentPage.adminLogs);
+
+            } catch (error) {
+                console.error('Error deleting log:', error);
+                showNotification(`Delete failed: ${error.message}`, 'error');
             }
-        });
-
-        if (!response.ok) throw new Error('Failed to delete log entry');
-
-        showNotification('Log entry deleted successfully', 'success');
-        if (type === 'userLogs') loadUserLogs(currentPage.userLogs);
-        else loadAdminLogs(currentPage.adminLogs);
-
-    } catch (error) {
-        console.error('Error deleting log:', error);
-        showNotification(`Delete failed: ${error.message}`, 'error');
-    }
+        },
+        'danger',
+        'Delete'
+    );
 }
 
 function escapeHtml(text) {
@@ -1143,24 +1185,28 @@ async function addCoinsToAllUsers() {
         return;
     }
 
-    if (!confirm(`Are you sure you want to add ${amount} coins to all ${totalUsers} users?`)) {
-        return;
-    }
+    showConfirmationModal(
+        'Add Coins to All Users',
+        `Are you sure you want to add ${amount} coins to all ${totalUsers} users?`,
+        async () => {
+            try {
+                showNotification('Adding coins to all users...', 'info');
 
-    try {
-        showNotification('Adding coins to all users...', 'info');
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+                showNotification(`Added ${amount} coins to all ${totalUsers} users`, 'success');
+                closeModal('add-coins-all-modal');
+                loadUsers(currentPage.users);
+                await logAdminAction('add_coins_all', null, `Added ${amount} coins to all ${totalUsers} users`);
 
-        showNotification(`Added ${amount} coins to all ${totalUsers} users`, 'success');
-        closeModal('add-coins-all-modal');
-        loadUsers(currentPage.users);
-        await logAdminAction('add_coins_all', null, `Added ${amount} coins to all ${totalUsers} users`);
-
-    } catch (error) {
-        console.error('Error adding coins to all users:', error);
-        showNotification(`Failed to add coins: ${error.message}`, 'error');
-    }
+            } catch (error) {
+                console.error('Error adding coins to all users:', error);
+                showNotification(`Failed to add coins: ${error.message}`, 'error');
+            }
+        },
+        'warning',
+        'Add Coins'
+    );
 }
 
 async function resetAllScores() {
@@ -1171,42 +1217,50 @@ async function resetAllScores() {
         return;
     }
 
-    if (!confirm(`⚠️ WARNING ⚠️\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`)) {
-        return;
-    }
+    showConfirmationModal(
+        'Reset All Scores',
+        `⚠️ WARNING ⚠️\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`,
+        async () => {
+            try {
+                showNotification('Resetting all scores...', 'info');
 
-    try {
-        showNotification('Resetting all scores...', 'info');
+                await new Promise(resolve => setTimeout(resolve, 2000));
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+                showNotification(`Reset scores for all ${totalUsers} users`, 'success');
+                loadUsers(currentPage.users);
+                await logAdminAction('reset_all_scores', null, `Reset scores for all ${totalUsers} users`);
 
-        showNotification(`Reset scores for all ${totalUsers} users`, 'success');
-        loadUsers(currentPage.users);
-        await logAdminAction('reset_all_scores', null, `Reset scores for all ${totalUsers} users`);
-
-    } catch (error) {
-        console.error('Error resetting all scores:', error);
-        showNotification(`Failed to reset scores: ${error.message}`, 'error');
-    }
+            } catch (error) {
+                console.error('Error resetting all scores:', error);
+                showNotification(`Failed to reset scores: ${error.message}`, 'error');
+            }
+        },
+        'danger',
+        'Reset All'
+    );
 }
 
 async function clearCache() {
-    if (!confirm('Are you sure you want to clear the cache?\n\nThis may improve performance but will cause slower initial load times.')) {
-        return;
-    }
+    showConfirmationModal(
+        'Clear Cache',
+        'Are you sure you want to clear the cache?\n\nThis may improve performance but will cause slower initial load times.',
+        async () => {
+            try {
+                showNotification('Clearing cache...', 'info');
 
-    try {
-        showNotification('Clearing cache...', 'info');
+                await new Promise(resolve => setTimeout(resolve, 1000));
 
-        await new Promise(resolve => setTimeout(resolve, 1000));
+                showNotification('Cache cleared successfully', 'success');
+                await logAdminAction('clear_cache', null, 'Cache cleared');
 
-        showNotification('Cache cleared successfully', 'success');
-        await logAdminAction('clear_cache', null, 'Cache cleared');
-
-    } catch (error) {
-        console.error('Error clearing cache:', error);
-        showNotification(`Failed to clear cache: ${error.message}`, 'error');
-    }
+            } catch (error) {
+                console.error('Error clearing cache:', error);
+                showNotification(`Failed to clear cache: ${error.message}`, 'error');
+            }
+        },
+        'warning',
+        'Clear Cache'
+    );
 }
 
 async function createBackup() {
@@ -1225,101 +1279,127 @@ async function createBackup() {
 }
 
 async function banUser(userId) {
-    if (!confirm('Are you sure you want to ban this user?')) return;
+    showConfirmationModal(
+        'Ban User',
+        'Are you sure you want to ban this user?',
+        async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/ban`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-secret': ADMIN_SECRET
+                    }
+                });
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/ban`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
+                if (!response.ok) throw new Error('Failed to ban user');
+
+                showNotification('User banned successfully', 'success');
+                closeModal('edit-user-modal');
+                loadUsers(currentPage.users);
+                await logAdminAction('ban_user', userId, 'User banned');
+
+            } catch (error) {
+                console.error('Error banning user:', error);
+                showNotification(`Failed to ban user: ${error.message}`, 'error');
             }
-        });
-
-        if (!response.ok) throw new Error('Failed to ban user');
-
-        showNotification('User banned successfully', 'success');
-        closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
-        await logAdminAction('ban_user', userId, 'User banned');
-
-    } catch (error) {
-        console.error('Error banning user:', error);
-        showNotification(`Failed to ban user: ${error.message}`, 'error');
-    }
+        },
+        'danger',
+        'Ban User'
+    );
 }
 
 async function unbanUser(userId) {
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/unban`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
+    showConfirmationModal(
+        'Unban User',
+        'Are you sure you want to unban this user?',
+        async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/unban`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-secret': ADMIN_SECRET
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to unban user');
+
+                showNotification('User unbanned successfully', 'success');
+                closeModal('edit-user-modal');
+                loadUsers(currentPage.users);
+                await logAdminAction('unban_user', userId, 'User unbanned');
+
+            } catch (error) {
+                console.error('Error unbanning user:', error);
+                showNotification(`Failed to unban user: ${error.message}`, 'error');
             }
-        });
-
-        if (!response.ok) throw new Error('Failed to unban user');
-
-        showNotification('User unbanned successfully', 'success');
-        closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
-        await logAdminAction('unban_user', userId, 'User unbanned');
-
-    } catch (error) {
-        console.error('Error unbanning user:', error);
-        showNotification(`Failed to unban user: ${error.message}`, 'error');
-    }
+        },
+        'success',
+        'Unban User'
+    );
 }
 
 async function resetUserScore(userId) {
-    if (!confirm('Are you sure you want to reset this user\'s score to 0?')) return;
+    showConfirmationModal(
+        'Reset User Score',
+        'Are you sure you want to reset this user\'s score to 0?',
+        async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-secret': ADMIN_SECRET
+                    }
+                });
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/reset-score`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
+                if (!response.ok) throw new Error('Failed to reset user score');
+
+                showNotification('User score reset to 0', 'success');
+                closeModal('edit-user-modal');
+                loadUsers(currentPage.users);
+                await logAdminAction('reset_score', userId, 'Score reset to 0');
+
+            } catch (error) {
+                console.error('Error resetting score:', error);
+                showNotification(`Failed to reset score: ${error.message}`, 'error');
             }
-        });
-
-        if (!response.ok) throw new Error('Failed to reset user score');
-
-        showNotification('User score reset to 0', 'success');
-        closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
-        await logAdminAction('reset_score', userId, 'Score reset to 0');
-
-    } catch (error) {
-        console.error('Error resetting score:', error);
-        showNotification(`Failed to reset score: ${error.message}`, 'error');
-    }
+        },
+        'danger',
+        'Reset Score'
+    );
 }
 
 async function deleteUser(userId) {
-    if (!confirm('⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!')) return;
+    showConfirmationModal(
+        'Delete User',
+        '⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!',
+        async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-admin-secret': ADMIN_SECRET
+                    }
+                });
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-admin-secret': ADMIN_SECRET
+                if (!response.ok) throw new Error('Failed to delete user');
+
+                showNotification('User deleted successfully', 'success');
+                closeModal('edit-user-modal');
+                loadUsers(currentPage.users);
+                await logAdminAction('delete_user', userId, 'User permanently deleted');
+
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                showNotification(`Failed to delete user: ${error.message}`, 'error');
             }
-        });
-
-        if (!response.ok) throw new Error('Failed to delete user');
-
-        showNotification('User deleted successfully', 'success');
-        closeModal('edit-user-modal');
-        loadUsers(currentPage.users);
-        await logAdminAction('delete_user', userId, 'User permanently deleted');
-
-    } catch (error) {
-        console.error('Error deleting user:', error);
-        showNotification(`Failed to delete user: ${error.message}`, 'error');
-    }
+        },
+        'danger',
+        'Delete User'
+    );
 }
 
 async function saveUserChanges() {
@@ -1369,7 +1449,6 @@ async function saveUserChanges() {
             auto_click_rate: new Decimal(autoClickRate).toFixed(9)
         };
 
-        // Add upgrade levels
         for (let i = 1; i <= 5; i++) {
             updates[`click_tier_${i}_level`] = parseInt(document.getElementById(`edit-click-tier-${i}`).value) || 0;
             updates[`auto_tier_${i}_level`] = parseInt(document.getElementById(`edit-auto-tier-${i}`).value) || 0;
@@ -1539,7 +1618,6 @@ function setupAdvancedSearch(sectionId) {
 
     if (!input || !bar) return;
 
-    // Create Dropdown Structure
     const dropdown = document.createElement('div');
     dropdown.className = 'search-menu-dropdown';
     dropdown.innerHTML = `
@@ -1547,11 +1625,14 @@ function setupAdvancedSearch(sectionId) {
         <div class="search-menu-options"></div>
     `;
     bar.appendChild(dropdown);
+    
+    dropdown.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
 
     const categoriesContainer = dropdown.querySelector('.search-menu-categories');
     const optionsContainer = dropdown.querySelector('.search-menu-options');
 
-    // Configuration
     const config = {
         categories: [
             { id: 'filters', label: 'Filters', icon: 'filter' },
@@ -1592,7 +1673,6 @@ function setupAdvancedSearch(sectionId) {
     let activeCategory = 'filters';
     let autocompleteTimer = null;
 
-    // Event Listeners
     bar.addEventListener('click', (e) => {
         if (!e.target.closest('.search-chip') && !e.target.closest('.chip-remove')) {
             input.focus();
@@ -1613,10 +1693,7 @@ function setupAdvancedSearch(sectionId) {
         if (val.length > 0) {
             dropdown.classList.add('active');
             if (val.includes(':')) {
-                // If typing filter manually, switch to relevant category if possible
-                // For now just keep current category
             } else {
-                // If just typing text, maybe switch to Users or just filter current options
                 if (activeCategory === 'filters') {
                     renderOptions(val);
                 } else if (activeCategory === 'users') {
@@ -1632,11 +1709,11 @@ function setupAdvancedSearch(sectionId) {
     });
 
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId].length > 0) {
+        if (e.key === 'Backspace' && input.value === '' && searchChips[sectionId] && searchChips[sectionId].length > 0) {
             removeChip(searchChips[sectionId].length - 1, sectionId);
         } else if (e.key === 'Enter') {
             dropdown.classList.remove('active');
-            triggerSearch();
+            triggerSearch(sectionId);
         }
     });
 
@@ -1648,7 +1725,8 @@ function setupAdvancedSearch(sectionId) {
         `).join('');
 
         categoriesContainer.querySelectorAll('.menu-category-item').forEach(item => {
-            item.addEventListener('click', () => {
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
                 activeCategory = item.dataset.id;
                 renderCategories();
                 renderOptions();
@@ -1680,7 +1758,7 @@ function setupAdvancedSearch(sectionId) {
                 `;
                 el.addEventListener('click', () => {
                     const [key, val] = opt.value.split(':');
-                    addChip(key + ':', val, sectionId);
+                    addChip(key + ':', val);
                     input.value = '';
                     dropdown.classList.remove('active');
                 });
@@ -1702,13 +1780,12 @@ function setupAdvancedSearch(sectionId) {
                 el.className = 'menu-option-item';
                 el.innerHTML = `<div class="menu-option-label">${d.label}</div>`;
                 el.addEventListener('click', () => {
-                    addChip('date:', d.value, sectionId);
+                    addChip('date:', d.value);
                     dropdown.classList.remove('active');
                 });
                 optionsContainer.appendChild(el);
             });
             
-            // Custom date picker trigger
             const custom = document.createElement('div');
             custom.className = 'menu-option-item';
             custom.innerHTML = '<div class="menu-option-label">Custom Range...</div>';
@@ -1716,7 +1793,7 @@ function setupAdvancedSearch(sectionId) {
                  if (!input._flatpickr) {
                     flatpickr(input, {
                         onChange: (selectedDates, dateStr) => {
-                            addChip('date:', dateStr, sectionId);
+                            addChip('date:', dateStr);
                             input.value = '';
                             input._flatpickr.destroy();
                             input._flatpickr = null;
@@ -1758,7 +1835,7 @@ function setupAdvancedSearch(sectionId) {
                     </div>
                 `;
                 el.addEventListener('click', () => {
-                    addChip('user:', u.user_id, sectionId);
+                    addChip('user:', u.user_id);
                     input.value = '';
                     dropdown.classList.remove('active');
                 });
@@ -1771,33 +1848,43 @@ function setupAdvancedSearch(sectionId) {
         }
     }
 
-    function addChip(key, value, sectionId) {
+    function addChip(key, value) {
         if (!searchChips[sectionId]) searchChips[sectionId] = [];
         searchChips[sectionId].push({ key, value });
         renderChips(sectionId);
-        triggerSearch();
-    }
-
-    window.removeChip = (index, sectionId) => {
-        searchChips[sectionId].splice(index, 1);
-        renderChips(sectionId);
-        triggerSearch();
-    };
-    
-    function triggerSearch() {
-        if (sectionId === 'userLogs') loadUserLogs(1);
-        else if (sectionId === 'adminLogs') loadAdminLogs(1);
-        else if (sectionId === 'transactions') loadTransactions(1);
-        else if (sectionId === 'tasks') loadTasks(1);
-        else if (sectionId === 'users') loadUsers(1);
+        triggerSearch(sectionId);
     }
 }
+
+function triggerSearch(sectionId) {
+    if (sectionId === 'userLogs') loadUserLogs(1);
+    else if (sectionId === 'adminLogs') loadAdminLogs(1);
+    else if (sectionId === 'transactions') loadTransactions(1);
+    else if (sectionId === 'tasks') loadTasks(1);
+    else if (sectionId === 'users') loadUsers(1);
+}
+
+window.removeChip = (index, sectionId) => {
+    if (searchChips[sectionId]) {
+        searchChips[sectionId].splice(index, 1);
+        renderChips(sectionId);
+        triggerSearch(sectionId);
+    }
+};
 
 function renderChips(sectionId) {
     const isUIAdmin = sectionId === 'adminLogs';
     const isTransactions = sectionId === 'transactions';
     const isTasks = sectionId === 'tasks';
-    const chipContainerId = isUIAdmin ? 'search-chips-admin' : (isTransactions ? 'search-chips-transactions' : (isTasks ? 'search-chips-tasks' : 'search-chips'));
+    const isUsers = sectionId === 'users';
+    
+    let chipContainerId = 'search-chips';
+    
+    if (isUIAdmin) chipContainerId = 'search-chips-admin';
+    else if (isTransactions) chipContainerId = 'search-chips-transactions';
+    else if (isTasks) chipContainerId = 'search-chips-tasks';
+    else if (isUsers) chipContainerId = 'search-chips-users';
+
     const container = document.getElementById(chipContainerId);
     if (!container) return;
     container.innerHTML = (searchChips[sectionId] || []).map((chip, index) => `
@@ -2274,7 +2361,6 @@ function setupEventListeners() {
     document.getElementById('close-broadcast-modal')?.addEventListener('click', () => closeModal('broadcast-modal'));
     document.getElementById('close-maintenance-modal')?.addEventListener('click', () => closeModal('maintenance-modal'));
 
-    // Task Events
     document.getElementById('create-task-btn')?.addEventListener('click', showCreateTaskModal);
     document.getElementById('close-create-task-modal')?.addEventListener('click', () => closeModal('create-task-modal'));
     document.getElementById('cancel-create-task')?.addEventListener('click', () => closeModal('create-task-modal'));
@@ -2643,13 +2729,12 @@ window.loadUserLogs = loadUserLogs;
 window.loadAdminLogs = loadAdminLogs;
 window.loadTransactions = loadTransactions;
 
-// Task Management Functions
 async function loadTasks(page = 1) {
     if (!currentUser) return;
     
     const input = document.getElementById('unified-search-input-tasks');
     const freeText = input?.value || '';
-    const filters = searchChips.tasks || [];
+    const filters = (searchChips && searchChips.tasks) ? searchChips.tasks : [];
     
     const tbody = document.getElementById('tasks-tbody');
     if (!tbody) return;
@@ -2660,8 +2745,16 @@ async function loadTasks(page = 1) {
         const url = new URL(`${BACKEND_URL}/admin/tasks`);
         url.searchParams.set('page', page);
         url.searchParams.set('limit', 15);
-        url.searchParams.set('sortBy', sortConfig.tasks.field);
-        url.searchParams.set('order', sortConfig.tasks.direction);
+        
+        if (!sortConfig.tasks) {
+            sortConfig.tasks = { field: 'created_at', direction: 'desc' };
+        }
+        
+        const sortField = sortConfig.tasks.field || 'created_at';
+        const sortDir = sortConfig.tasks.direction || 'desc';
+        
+        url.searchParams.set('sortBy', sortField);
+        url.searchParams.set('order', sortDir);
         url.searchParams.set('search', JSON.stringify({ freeText, filters }));
 
         const response = await fetch(url, {
@@ -2669,8 +2762,12 @@ async function loadTasks(page = 1) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to load tasks: ${response.status} ${response.statusText} - ${errorText}`);
+            let errorText = await response.text();
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorText = errorJson.error || errorJson.message || errorText;
+            } catch (e) {}
+            throw new Error(`Server Error (${response.status}): ${errorText}`);
         }
         
         const data = await response.json();
@@ -2682,7 +2779,18 @@ async function loadTasks(page = 1) {
 
     } catch (error) {
         console.error('Error loading tasks:', error);
-        tbody.innerHTML = `<tr><td colspan="7" class="error">Error: ${error.message}</td></tr>`;
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="error" style="text-align: center; padding: 2rem; color: var(--danger);">
+                    <div style="margin-bottom: 0.5rem;"><i class="fas fa-exclamation-triangle fa-2x"></i></div>
+                    <div>Failed to load tasks</div>
+                    <div style="font-size: 0.8rem; opacity: 0.8; margin-top: 0.5rem;">${escapeHtml(error.message)}</div>
+                    <button class="btn btn-outline btn-sm" onclick="loadTasks(${page})" style="margin-top: 1rem;">
+                        <i class="fas fa-sync-alt"></i> Retry
+                    </button>
+                </td>
+            </tr>`;
+        showNotification('Failed to load tasks: ' + error.message, 'error');
     }
 }
 
@@ -2780,23 +2888,29 @@ async function createTask() {
 }
 
 async function deleteTask(taskId) {
-    if (!confirm('Are you sure you want to delete this task?')) return;
+    showConfirmationModal(
+        'Delete Task',
+        'Are you sure you want to delete this task?',
+        async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/admin/tasks/${taskId}`, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-secret': ADMIN_SECRET }
+                });
 
-    try {
-        const response = await fetch(`${BACKEND_URL}/admin/tasks/${taskId}`, {
-            method: 'DELETE',
-            headers: { 'x-admin-secret': ADMIN_SECRET }
-        });
+                if (!response.ok) throw new Error('Failed to delete task');
 
-        if (!response.ok) throw new Error('Failed to delete task');
+                showNotification('Task deleted successfully', 'success');
+                loadTasks();
 
-        showNotification('Task deleted successfully', 'success');
-        loadTasks();
-
-    } catch (error) {
-        console.error('Error deleting task:', error);
-        showNotification(`Failed to delete task: ${error.message}`, 'error');
-    }
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                showNotification(`Failed to delete task: ${error.message}`, 'error');
+            }
+        },
+        'danger',
+        'Delete'
+    );
 }
 
 window.loadTasks = loadTasks;
