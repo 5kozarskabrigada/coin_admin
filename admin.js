@@ -160,14 +160,13 @@ function openSkinModal(skin = null) {
         } catch (e) {}
     }
     document.getElementById('skin-active').checked = skin ? !!skin.is_active : true;
-    // set source selector
+
     const source = (skin && skin.price) ? 'price' : (skin && skin.task_id) ? 'task' : 'free';
     const srcEl = document.getElementById('skin-source');
     if (srcEl) srcEl.value = source;
     toggleSkinFields(source);
     document.getElementById('skin-modal').classList.add('active');
 
-    // update preview
     const previewImg = document.getElementById('skin-preview-img');
     const previewInfo = document.getElementById('skin-preview-info');
     if (previewImg) {
@@ -228,6 +227,11 @@ async function saveSkin() {
 
     if (!name || !image_url) {
         showNotification('Name and Image URL are required', 'error');
+        return;
+    }
+
+    if (!image_url.match(/^https?:\/\/.+\.(png|jpg|jpeg|gif|webp)$/i) && !image_url.startsWith('/assets/')) {
+        showNotification('Image URL must be a valid HTTP/HTTPS image URL (e.g., https://example.com/image.png)', 'error');
         return;
     }
 
