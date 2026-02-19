@@ -84,6 +84,134 @@ function formatTimeAgo(dateString) {
     } else {
         return date.toLocaleDateString();
     }
+
+/* Skins admin: load, render, create/edit/delete */
+async function loadSkinsAdmin() {
+    const tbody = document.getElementById('skins-admin-tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading skins...</td></tr>';
+    try {
+        const resp = await fetch(`${BACKEND_URL}/skins`);
+        if (!resp.ok) throw new Error('Failed to fetch skins');
+        const data = await resp.json();
+        const skins = data.skins || [];
+        renderSkinsAdminTable(skins);
+    } catch (err) {
+        console.error('Error loading skins:', err);
+        tbody.innerHTML = `<tr><td colspan="6" class="error">Failed to load skins: ${escapeHtml(err.message)}</td></tr>`;
+        showNotification('Failed to load skins', 'error');
+    }
+}
+
+function renderSkinsAdminTable(skins) {
+    const tbody = document.getElementById('skins-admin-tbody');
+    if (!tbody) return;
+    if (!skins || skins.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:2rem;">No skins found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = skins.map(skin => {
+        const priceDisplay = skin.price ? new Decimal(skin.price).toFixed(9) : (skin.task_id ? 'Task Reward' : 'Free');
+        const active = skin.is_active ? 'Yes' : 'No';
+        const img = skin.image_url ? `<img src="${escapeHtml(skin.image_url)}" alt="${escapeHtml(skin.name)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : '';
+
+        return `
+        <tr data-name="${escapeHtml(skin.name || '')}" data-image-url="${escapeHtml(skin.image_url || '')}" data-price="${escapeHtml(String(skin.price || ''))}" data-task-id="${escapeHtml(String(skin.task_id || ''))}" data-active="${skin.is_active}">
+            <td>${img}</td>
+            <td style="font-weight:600;">${escapeHtml(skin.name || '')}</td>
+            <td>${priceDisplay}</td>
+            <td>${escapeHtml(String(skin.task_id || ''))}</td>
+            <td><span class="badge ${skin.is_active ? 'badge-success' : 'badge-danger'}">${active}</span></td>
+            <td>
+                <button class="btn btn-outline btn-sm edit-skin-btn" data-skin-id="${skin.id}"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-outline btn-sm delete-skin-btn" data-skin-id="${skin.id}" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+function openSkinModal(skin = null) {
+    document.getElementById('skin-id').value = skin?.id || '';
+    document.getElementById('skin-name').value = skin?.name || '';
+    document.getElementById('skin-image-url').value = skin?.image_url || '';
+    document.getElementById('skin-price').value = skin?.price || '';
+    document.getElementById('skin-task-id').value = skin?.task_id || '';
+    document.getElementById('skin-active').checked = skin ? !!skin.is_active : true;
+    document.getElementById('skin-modal').classList.add('active');
+}
+
+function closeSkinModal() {
+    document.getElementById('skin-modal').classList.remove('active');
+}
+
+async function saveSkin() {
+    const id = document.getElementById('skin-id').value || null;
+    const name = document.getElementById('skin-name').value.trim();
+    const image_url = document.getElementById('skin-image-url').value.trim();
+    const price = document.getElementById('skin-price').value.trim() || null;
+    const task_id = document.getElementById('skin-task-id').value.trim() || null;
+    const is_active = document.getElementById('skin-active').checked;
+
+    if (!name || !image_url) {
+        showNotification('Name and Image URL are required', 'error');
+        return;
+    }
+
+    try {
+        const payload = { name, image_url, price: price || null, task_id: task_id || null, is_active };
+        let resp;
+        if (id) {
+            resp = await fetch(`${BACKEND_URL}/admin/skins/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            resp = await fetch(`${BACKEND_URL}/admin/skins`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-secret': ADMIN_SECRET },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        if (!resp.ok) {
+            const txt = await resp.text();
+            throw new Error(txt || 'Server error');
+        }
+
+        showNotification('Skin saved', 'success');
+        closeSkinModal();
+        loadSkinsAdmin();
+    } catch (err) {
+        console.error('Error saving skin:', err);
+        showNotification('Failed to save skin: ' + err.message, 'error');
+    }
+}
+
+function deleteSkin(skinId) {
+    showConfirmationModal(
+        'Delete Skin',
+        'Are you sure you want to delete this skin? This action cannot be undone.',
+        async () => {
+            try {
+                const resp = await fetch(`${BACKEND_URL}/admin/skins/${skinId}`, {
+                    method: 'DELETE',
+                    headers: { 'x-admin-secret': ADMIN_SECRET }
+                });
+                if (!resp.ok) throw new Error('Failed to delete skin');
+                showNotification('Skin deleted', 'success');
+                loadSkinsAdmin();
+            } catch (err) {
+                console.error('Delete skin error:', err);
+                showNotification('Failed to delete skin', 'error');
+            }
+        },
+        'danger',
+        'Delete'
+    );
+}
 }
 
 function formatDateTime(dateString) {
@@ -2327,6 +2455,7 @@ function setupEventListeners() {
     document.getElementById('tasks-nav')?.addEventListener('click', () => showSection('tasks'));
     document.getElementById('user-logs-nav')?.addEventListener('click', () => showSection('user-logs'));
     document.getElementById('admin-logs-nav')?.addEventListener('click', () => showSection('admin-logs'));
+    document.getElementById('skins-nav')?.addEventListener('click', () => { showSection('skins-admin'); loadSkinsAdmin(); });
     document.getElementById('settings-nav')?.addEventListener('click', () => showSection('settings'));
     
     document.getElementById('logout-button')?.addEventListener('click', logout);
@@ -2365,6 +2494,12 @@ function setupEventListeners() {
     document.getElementById('close-create-task-modal')?.addEventListener('click', () => closeModal('create-task-modal'));
     document.getElementById('cancel-create-task')?.addEventListener('click', () => closeModal('create-task-modal'));
     document.getElementById('confirm-create-task')?.addEventListener('click', createTask);
+    // Skins admin controls
+    document.getElementById('create-skin-btn')?.addEventListener('click', () => openSkinModal());
+    document.getElementById('refresh-skins-btn')?.addEventListener('click', loadSkinsAdmin);
+    document.getElementById('close-skin-modal')?.addEventListener('click', closeSkinModal);
+    document.getElementById('cancel-skin-btn')?.addEventListener('click', closeSkinModal);
+    document.getElementById('save-skin-btn')?.addEventListener('click', saveSkin);
     
     document.addEventListener('click', (e) => {
         if (e.target.classList.contains('modal')) {
@@ -2440,6 +2575,21 @@ function setupEventListeners() {
         } else if (e.target.id === 'delete-user-btn') {
             const userId = e.target.dataset.userId;
             deleteUser(userId);
+        } else if (e.target.closest('.edit-skin-btn')) {
+            const id = e.target.closest('.edit-skin-btn').dataset.skinId;
+            const row = e.target.closest('tr');
+            const skin = row ? {
+                id,
+                name: row.dataset.name,
+                image_url: row.dataset.imageUrl,
+                price: row.dataset.price,
+                task_id: row.dataset.taskId,
+                is_active: row.dataset.active === 'true'
+            } : { id };
+            openSkinModal(skin);
+        } else if (e.target.closest('.delete-skin-btn')) {
+            const id = e.target.closest('.delete-skin-btn').dataset.skinId;
+            deleteSkin(id);
         } else if (e.target.id === 'save-user-changes') {
             saveUserChanges();
         } else if (e.target.id === 'cancel-edit-user') {
@@ -2924,3 +3074,7 @@ window.saveUserChanges = saveUserChanges;
 window.closeModal = closeModal;
 window.saveUserChanges = saveUserChanges;
 window.closeModal = closeModal;
+window.loadSkinsAdmin = loadSkinsAdmin;
+window.openSkinModal = openSkinModal;
+window.saveSkin = saveSkin;
+window.deleteSkin = deleteSkin;

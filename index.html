@@ -101,6 +101,10 @@
                         <i class="fas fa-shield-alt"></i>
                         <span class="nav-text">Admin Logs</span>
                     </button>
+                    <button class="nav-btn" id="skins-nav">
+                        <i class="fas fa-tshirt"></i>
+                        <span class="nav-text">Skins</span>
+                    </button>
                     <button class="nav-btn" id="settings-nav">
                         <i class="fas fa-cogs"></i>
                         <span class="nav-text">Settings</span>
@@ -129,6 +133,37 @@
             </aside>
 
             <div class="admin-content">
+                <!-- Skins Admin Section -->
+                <div id="skins-admin" class="section">
+                    <div class="card-header">
+                        <h1 class="card-title">Skins Management</h1>
+                        <div style="display:flex; gap:0.5rem; align-items:center;">
+                            <button class="btn btn-primary btn-sm" id="create-skin-btn"><i class="fas fa-plus"></i> New Skin</button>
+                            <button class="btn btn-outline btn-sm" id="refresh-skins-btn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        </div>
+                    </div>
+
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width:10%">Preview</th>
+                                        <th style="width:30%">Name</th>
+                                        <th style="width:15%">Price</th>
+                                        <th style="width:20%">Task ID</th>
+                                        <th style="width:10%">Active</th>
+                                        <th style="width:15%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="skins-admin-tbody">
+                                    <tr><td colspan="6" class="loading">Loading skins...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="pagination" id="skins-pagination"></div>
+                    </div>
+                </div>
                 <!-- Dashboard Section -->
                 <div id="dashboard" class="section active">
                     <div class="card-header">
@@ -528,6 +563,42 @@
                 <button class="btn btn-warning" id="enable-maintenance-btn">Enable</button>
                 <button class="btn btn-success" id="disable-maintenance-btn" style="display: none;">Disable</button>
                 <button class="btn btn-outline" id="cancel-maintenance-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skin modal (create/edit) -->
+    <div id="skin-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="card-title"><i class="fas fa-tshirt"></i> Manage Skin</h3>
+                <button class="btn btn-outline btn-sm" id="close-skin-modal"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="skin-id">
+                <div class="form-group">
+                    <label>Skin Name</label>
+                    <input type="text" id="skin-name" class="form-control" placeholder="Descriptive name">
+                </div>
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <input type="text" id="skin-image-url" class="form-control" placeholder="https://.../image.png">
+                </div>
+                <div class="form-group">
+                    <label>Price (coins) — leave empty to make task-only</label>
+                    <input type="text" id="skin-price" class="form-control" placeholder="e.g. 0.000000100">
+                </div>
+                <div class="form-group">
+                    <label>Task ID (optional) — grant when task completed</label>
+                    <input type="text" id="skin-task-id" class="form-control" placeholder="UUID of task">
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="skin-active" checked> Active</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="save-skin-btn">Save</button>
+                <button class="btn btn-outline" id="cancel-skin-btn">Cancel</button>
             </div>
         </div>
     </div>
