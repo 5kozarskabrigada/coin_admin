@@ -85,6 +85,7 @@ function formatTimeAgo(dateString) {
         return date.toLocaleDateString();
     }
 
+}
 
 async function loadSkinsAdmin() {
     const tbody = document.getElementById('skins-admin-tbody');
@@ -211,7 +212,6 @@ function deleteSkin(skinId) {
         'danger',
         'Delete'
     );
-}
 }
 
 function formatDateTime(dateString) {
