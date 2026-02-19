@@ -37,29 +37,29 @@ let debounceTimer = null;
 let maintenanceMode = false;
 
 const actionTypeMap = {
-    'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: 'ðŸ†' },
-    'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: 'âš™ï¸' },
-    'coin_transfer': { name: 'Sent Coins', color: 'info', icon: 'ðŸ’°' },
-    'coin_received': { name: 'Received Coins', color: 'success', icon: 'ðŸ’¸' },
-    'login': { name: 'Logged In', color: 'info', icon: 'ðŸ”‘' },
-    
-    'ban_user': { name: 'User Banned', color: 'danger', icon: 'ðŸš«' },
-    'unban_user': { name: 'User Unbanned', color: 'success', icon: 'âœ…' },
-    'add_coins': { name: 'Coins Added', color: 'warning', icon: 'âž•' },
-    'reset_score': { name: 'Score Reset', color: 'danger', icon: 'ðŸ”„' },
-    'delete_user': { name: 'User Deleted', color: 'danger', icon: 'ðŸ—‘ï¸' },
-    'admin_login': { name: 'Admin Login', color: 'info', icon: 'ðŸ‘‘' },
-    'send_broadcast': { name: 'Broadcast Sent', color: 'info', icon: 'ðŸ“¢' },
-    'create_backup': { name: 'Backup Created', color: 'info', icon: 'ðŸ’¾' },
-    'enable_maintenance': { name: 'Maintenance Enabled', color: 'warning', icon: 'ðŸ”§' },
-    'disable_maintenance': { name: 'Maintenance Disabled', color: 'success', icon: 'âœ…' },
-    'make_admin': { name: 'Admin Promoted', color: 'primary', icon: 'ðŸ‘‘' },
-    'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: 'ðŸ‘¤' },
-    'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: 'ðŸ”„' },
-    'update_user': { name: 'User Updated', color: 'info', icon: 'âœï¸' },
-    'add_coins_all': { name: 'Coins Added to All', color: 'warning', icon: 'ðŸ‘¥' },
-    'reset_all_scores': { name: 'All Scores Reset', color: 'danger', icon: 'ðŸ”„' },
-    'clear_cache': { name: 'Cache Cleared', color: 'info', icon: 'ðŸ—‘ï¸' }
+    'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: '<i class="fas fa-trophy"></i>' },
+    'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: '<i class="fas fa-shopping-cart"></i>' },
+    'coin_transfer': { name: 'Sent Coins', color: 'info', icon: '<i class="fas fa-paper-plane"></i>' },
+    'coin_received': { name: 'Received Coins', color: 'success', icon: '<i class="fas fa-coins"></i>' },
+    'login': { name: 'Logged In', color: 'info', icon: '<i class="fas fa-sign-in-alt"></i>' },
+
+    'ban_user': { name: 'User Banned', color: 'danger', icon: '<i class="fas fa-ban"></i>' },
+    'unban_user': { name: 'User Unbanned', color: 'success', icon: '<i class="fas fa-check"></i>' },
+    'add_coins': { name: 'Coins Added', color: 'warning', icon: '<i class="fas fa-plus-circle"></i>' },
+    'reset_score': { name: 'Score Reset', color: 'danger', icon: '<i class="fas fa-sync-alt"></i>' },
+    'delete_user': { name: 'User Deleted', color: 'danger', icon: '<i class="fas fa-user-times"></i>' },
+    'admin_login': { name: 'Admin Login', color: 'info', icon: '<i class="fas fa-user-shield"></i>' },
+    'send_broadcast': { name: 'Broadcast Sent', color: 'info', icon: '<i class="fas fa-bullhorn"></i>' },
+    'create_backup': { name: 'Backup Created', color: 'info', icon: '<i class="fas fa-save"></i>' },
+    'enable_maintenance': { name: 'Maintenance Enabled', color: 'warning', icon: '<i class="fas fa-tools"></i>' },
+    'disable_maintenance': { name: 'Maintenance Disabled', color: 'success', icon: '<i class="fas fa-check"></i>' },
+    'make_admin': { name: 'Admin Promoted', color: 'primary', icon: '<i class="fas fa-user-shield"></i>' },
+    'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: '<i class="fas fa-user-minus"></i>' },
+    'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: '<i class="fas fa-redo"></i>' },
+    'update_user': { name: 'User Updated', color: 'info', icon: '<i class="fas fa-edit"></i>' },
+    'add_coins_all': { name: 'Coins Added to All', color: 'warning', icon: '<i class="fas fa-coins"></i>' },
+    'reset_all_scores': { name: 'All Scores Reset', color: 'danger', icon: '<i class="fas fa-sync-alt"></i>' },
+    'clear_cache': { name: 'Cache Cleared', color: 'info', icon: '<i class="fas fa-sync-alt"></i>' }
 };
 
 function formatTimeAgo(dateString) {
@@ -138,8 +138,32 @@ function openSkinModal(skin = null) {
     document.getElementById('skin-name').value = skin?.name || '';
     document.getElementById('skin-image-url').value = skin?.image_url || '';
     document.getElementById('skin-price').value = skin?.price || '';
-    document.getElementById('skin-task-id').value = skin?.task_id || '';
+    // populate task dropdown and set selection
+    const taskSelect = document.getElementById('skin-task-select');
+    if (taskSelect) {
+        taskSelect.innerHTML = '<option value="">— Select a task —</option>';
+        try {
+            fetch(`${BACKEND_URL}/admin/tasks`, { headers: { 'x-admin-secret': ADMIN_SECRET } })
+                .then(r => r.json())
+                .then(data => {
+                    const tasksList = data.tasks || [];
+                    tasksList.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = t.id;
+                        opt.textContent = `${t.title} ${t.target_value ? `(${t.target_value})` : ''}`;
+                        taskSelect.appendChild(opt);
+                    });
+                    if (skin && skin.task_id) taskSelect.value = skin.task_id;
+                })
+                .catch(() => {});
+        } catch (e) {}
+    }
     document.getElementById('skin-active').checked = skin ? !!skin.is_active : true;
+    // set source selector
+    const source = (skin && skin.price) ? 'price' : (skin && skin.task_id) ? 'task' : 'free';
+    const srcEl = document.getElementById('skin-source');
+    if (srcEl) srcEl.value = source;
+    toggleSkinFields(source);
     document.getElementById('skin-modal').classList.add('active');
 }
 
@@ -147,12 +171,33 @@ function closeSkinModal() {
     document.getElementById('skin-modal').classList.remove('active');
 }
 
+function toggleSkinFields(mode) {
+    const priceRow = document.getElementById('skin-price-row');
+    const taskRow = document.getElementById('skin-task-row');
+    if (mode === 'price') {
+        if (priceRow) priceRow.style.display = '';
+        if (taskRow) taskRow.style.display = 'none';
+    } else if (mode === 'task') {
+        if (priceRow) priceRow.style.display = 'none';
+        if (taskRow) taskRow.style.display = '';
+    } else {
+        if (priceRow) priceRow.style.display = 'none';
+        if (taskRow) taskRow.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const src = document.getElementById('skin-source');
+    if (src) src.addEventListener('change', (e) => toggleSkinFields(e.target.value));
+});
+
 async function saveSkin() {
     const id = document.getElementById('skin-id').value || null;
     const name = document.getElementById('skin-name').value.trim();
     const image_url = document.getElementById('skin-image-url').value.trim();
-    const price = document.getElementById('skin-price').value.trim() || null;
-    const task_id = document.getElementById('skin-task-id').value.trim() || null;
+    const source = document.getElementById('skin-source')?.value || 'free';
+    const price = (source === 'price') ? (document.getElementById('skin-price').value.trim() || null) : null;
+    const task_id = (source === 'task') ? (document.getElementById('skin-task-select')?.value || null) : null;
     const is_active = document.getElementById('skin-active').checked;
 
     if (!name || !image_url) {
@@ -335,7 +380,7 @@ function getTelegramAvatarUrl(user) {
 
 async function initAdminPanel() {
     try {
-        console.log('ðŸš€ Initializing admin panel...');
+        console.log('Initializing admin panel...');
         
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
@@ -358,7 +403,7 @@ async function initAdminPanel() {
         }
         
     } catch (error) {
-        console.error('âŒ Failed to initialize admin panel:', error);
+        console.error('Failed to initialize admin panel:', error);
         showNotification('Failed to initialize admin panel. Please refresh the page.', 'error');
     }
 }
@@ -1155,7 +1200,7 @@ async function editUser(userId) {
                         <div style="display: flex; gap: 1rem; align-items: center;">
                             <input type="number" id="edit-auto-click-rate" class="form-control" value="${new Decimal(user.auto_click_rate || 0).toFixed(9)}" style="font-family: 'JetBrains Mono', monospace; flex: 1;" step="0.000000001" min="0" max="100">
                             <div id="cps-preview" style="padding: 0.5rem 1rem; background: var(--bg-darker); border-radius: 6px; font-size: 0.85rem; color: var(--success); font-weight: 600; min-width: 140px; text-align: center;">
-                                â‰ˆ ${(new Decimal(user.auto_click_rate || 0).times(60)).toFixed(6)} / min
+                                ≈ ${(new Decimal(user.auto_click_rate || 0).times(60)).toFixed(6)} / min
                             </div>
                         </div>
                         <p style="font-size: 0.7rem; color: var(--text-dim); mt-1;">Limits: 0.0 to 100.0 CPS. Affects background earnings.</p>
@@ -1242,7 +1287,7 @@ async function editUser(userId) {
         cpsInput.addEventListener('input', (e) => {
             try {
                 const val = new Decimal(e.target.value || 0);
-                cpsPreview.textContent = `â‰ˆ ${val.times(60).toFixed(6)} / min`;
+                cpsPreview.textContent = `≈ ${val.times(60).toFixed(6)} / min`;
                 if (val.gt(100)) cpsPreview.style.color = 'var(--danger)';
                 else cpsPreview.style.color = 'var(--success)';
             } catch (e) {
@@ -1347,7 +1392,7 @@ async function resetAllScores() {
 
     showConfirmationModal(
         'Reset All Scores',
-        `âš ï¸ WARNING âš ï¸\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`,
+        `WARNING\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`,
         async () => {
             try {
                 showNotification('Resetting all scores...', 'info');
@@ -1502,7 +1547,7 @@ async function resetUserScore(userId) {
 async function deleteUser(userId) {
     showConfirmationModal(
         'Delete User',
-        'âš ï¸ DANGER ZONE âš ï¸\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!',
+        'DANGER ZONE\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!',
         async () => {
             try {
                 const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
@@ -2788,7 +2833,7 @@ async function handleQuickSearch(query) {
                 type: 'USER',
                 id: u.user_id,
                 title: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || 'Anonymous',
-                subtitle: `@${u.username || 'no_username'} â€¢ ID: ${u.user_id}`,
+                subtitle: `@${u.username || 'no_username'} · ID: ${u.user_id}`,
                 icon: 'user',
                 action: () => {
                     showSection('users');
