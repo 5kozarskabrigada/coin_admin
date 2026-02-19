@@ -138,7 +138,7 @@ function openSkinModal(skin = null) {
     document.getElementById('skin-name').value = skin?.name || '';
     document.getElementById('skin-image-url').value = skin?.image_url || '';
     document.getElementById('skin-price').value = skin?.price || '';
-    // populate task dropdown and set selection
+    
     const taskSelect = document.getElementById('skin-task-select');
     if (taskSelect) {
         taskSelect.innerHTML = '<option value="">— Select a task —</option>';
