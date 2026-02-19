@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -37,7 +37,7 @@
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" class="form-control" placeholder="••••••••" autocomplete="current-password">
+                    <input type="password" id="password" class="form-control" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password">
                 </div>
                 <div id="login-error" class="error-message mb-3" style="color: var(--danger); font-size: 0.875rem; display: none;"></div>
                 <button class="btn btn-primary btn-block" id="login-button">
@@ -133,7 +133,7 @@
             </aside>
 
             <div class="admin-content">
-                <!-- Skins Admin Section -->
+                
                 <div id="skins-admin" class="section">
                     <div class="card-header">
                         <h1 class="card-title">Skins Management</h1>
@@ -164,7 +164,7 @@
                         <div class="pagination" id="skins-pagination"></div>
                     </div>
                 </div>
-                <!-- Dashboard Section -->
+                
                 <div id="dashboard" class="section active">
                     <div class="card-header">
                         <h1 class="card-title">Dashboard Overview</h1>
@@ -238,7 +238,7 @@
                     </div>
                 </div>
 
-                <!-- Users Section -->
+                
                 <div id="users" class="section">
                     <div class="card-header">
                         <h1 class="card-title">User Management</h1>
@@ -276,7 +276,7 @@
                     </div>
                 </div>
 
-                <!-- Transactions Section -->
+                
                 <div id="transactions" class="section">
                     <div class="card-header">
                         <h1 class="card-title">Transaction History</h1>
@@ -309,7 +309,7 @@
                     </div>
                 </div>
 
-                <!-- Tasks Section -->
+                
                 <div id="tasks" class="section">
                     <div class="card-header">
                         <h1 class="card-title">Task Management</h1>
@@ -346,7 +346,7 @@
                     </div>
                 </div>
 
-                <!-- User Logs Section -->
+                
                 <div id="user-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title">User Activity Logs</h1>
@@ -379,7 +379,7 @@
                     </div>
                 </div>
 
-                <!-- Admin Logs Section -->
+                
                 <div id="admin-logs" class="section">
                     <div class="card-header">
                         <h1 class="card-title">Admin Activity Logs</h1>
@@ -413,7 +413,7 @@
                     </div>
                 </div>
 
-                <!-- Settings Section -->
+                
                 <div id="settings" class="section">
                     <div class="card-header">
                         <h1 class="card-title">System Settings</h1>
@@ -460,7 +460,7 @@
         </main>
     </section>
 
-    <!-- Modals -->
+    
     <div id="edit-user-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -567,7 +567,7 @@
         </div>
     </div>
 
-    <!-- Skin modal (create/edit) -->
+    
     <div id="skin-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -585,11 +585,11 @@
                     <input type="text" id="skin-image-url" class="form-control" placeholder="https://.../image.png">
                 </div>
                 <div class="form-group">
-                    <label>Price (coins) — leave empty to make task-only</label>
+                    <label>Price (coins) â€” leave empty to make task-only</label>
                     <input type="text" id="skin-price" class="form-control" placeholder="e.g. 0.000000100">
                 </div>
                 <div class="form-group">
-                    <label>Task ID (optional) — grant when task completed</label>
+                    <label>Task ID (optional) â€” grant when task completed</label>
                     <input type="text" id="skin-task-id" class="form-control" placeholder="UUID of task">
                 </div>
                 <div class="form-group">
@@ -683,3 +683,4 @@
     <script src="admin.js"></script>
 </body>
 </html>
+

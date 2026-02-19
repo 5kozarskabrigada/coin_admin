@@ -1,4 +1,4 @@
-const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
+﻿const SUPABASE_URL = 'https://qouonnohcwhzayznibjo.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvdW9ubm9oY3doemF5em5pYmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzMTAzMzYsImV4cCI6MjA3MTg4NjMzNn0.4UMYvmVZvTzurcpNbhItUyzRUbJS60BXHlofqroAuww';
 
 
@@ -37,29 +37,29 @@ let debounceTimer = null;
 let maintenanceMode = false;
 
 const actionTypeMap = {
-    'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: '🏆' },
-    'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: '⚙️' },
-    'coin_transfer': { name: 'Sent Coins', color: 'info', icon: '💰' },
-    'coin_received': { name: 'Received Coins', color: 'success', icon: '💸' },
-    'login': { name: 'Logged In', color: 'info', icon: '🔑' },
+    'solo_lottery_win': { name: 'Won Solo Game', color: 'success', icon: 'ðŸ†' },
+    'upgrade_purchase': { name: 'Purchased Upgrade', color: 'primary', icon: 'âš™ï¸' },
+    'coin_transfer': { name: 'Sent Coins', color: 'info', icon: 'ðŸ’°' },
+    'coin_received': { name: 'Received Coins', color: 'success', icon: 'ðŸ’¸' },
+    'login': { name: 'Logged In', color: 'info', icon: 'ðŸ”‘' },
     
-    'ban_user': { name: 'User Banned', color: 'danger', icon: '🚫' },
-    'unban_user': { name: 'User Unbanned', color: 'success', icon: '✅' },
-    'add_coins': { name: 'Coins Added', color: 'warning', icon: '➕' },
-    'reset_score': { name: 'Score Reset', color: 'danger', icon: '🔄' },
-    'delete_user': { name: 'User Deleted', color: 'danger', icon: '🗑️' },
-    'admin_login': { name: 'Admin Login', color: 'info', icon: '👑' },
-    'send_broadcast': { name: 'Broadcast Sent', color: 'info', icon: '📢' },
-    'create_backup': { name: 'Backup Created', color: 'info', icon: '💾' },
-    'enable_maintenance': { name: 'Maintenance Enabled', color: 'warning', icon: '🔧' },
-    'disable_maintenance': { name: 'Maintenance Disabled', color: 'success', icon: '✅' },
-    'make_admin': { name: 'Admin Promoted', color: 'primary', icon: '👑' },
-    'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: '👤' },
-    'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: '🔄' },
-    'update_user': { name: 'User Updated', color: 'info', icon: '✏️' },
-    'add_coins_all': { name: 'Coins Added to All', color: 'warning', icon: '👥' },
-    'reset_all_scores': { name: 'All Scores Reset', color: 'danger', icon: '🔄' },
-    'clear_cache': { name: 'Cache Cleared', color: 'info', icon: '🗑️' }
+    'ban_user': { name: 'User Banned', color: 'danger', icon: 'ðŸš«' },
+    'unban_user': { name: 'User Unbanned', color: 'success', icon: 'âœ…' },
+    'add_coins': { name: 'Coins Added', color: 'warning', icon: 'âž•' },
+    'reset_score': { name: 'Score Reset', color: 'danger', icon: 'ðŸ”„' },
+    'delete_user': { name: 'User Deleted', color: 'danger', icon: 'ðŸ—‘ï¸' },
+    'admin_login': { name: 'Admin Login', color: 'info', icon: 'ðŸ‘‘' },
+    'send_broadcast': { name: 'Broadcast Sent', color: 'info', icon: 'ðŸ“¢' },
+    'create_backup': { name: 'Backup Created', color: 'info', icon: 'ðŸ’¾' },
+    'enable_maintenance': { name: 'Maintenance Enabled', color: 'warning', icon: 'ðŸ”§' },
+    'disable_maintenance': { name: 'Maintenance Disabled', color: 'success', icon: 'âœ…' },
+    'make_admin': { name: 'Admin Promoted', color: 'primary', icon: 'ðŸ‘‘' },
+    'remove_admin': { name: 'Admin Demoted', color: 'warning', icon: 'ðŸ‘¤' },
+    'reset_upgrades': { name: 'Upgrades Reset', color: 'danger', icon: 'ðŸ”„' },
+    'update_user': { name: 'User Updated', color: 'info', icon: 'âœï¸' },
+    'add_coins_all': { name: 'Coins Added to All', color: 'warning', icon: 'ðŸ‘¥' },
+    'reset_all_scores': { name: 'All Scores Reset', color: 'danger', icon: 'ðŸ”„' },
+    'clear_cache': { name: 'Cache Cleared', color: 'info', icon: 'ðŸ—‘ï¸' }
 };
 
 function formatTimeAgo(dateString) {
@@ -85,7 +85,7 @@ function formatTimeAgo(dateString) {
         return date.toLocaleDateString();
     }
 
-/* Skins admin: load, render, create/edit/delete */
+
 async function loadSkinsAdmin() {
     const tbody = document.getElementById('skins-admin-tbody');
     if (!tbody) return;
@@ -335,7 +335,7 @@ function getTelegramAvatarUrl(user) {
 
 async function initAdminPanel() {
     try {
-        console.log('🚀 Initializing admin panel...');
+        console.log('ðŸš€ Initializing admin panel...');
         
         supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
@@ -358,7 +358,7 @@ async function initAdminPanel() {
         }
         
     } catch (error) {
-        console.error('❌ Failed to initialize admin panel:', error);
+        console.error('âŒ Failed to initialize admin panel:', error);
         showNotification('Failed to initialize admin panel. Please refresh the page.', 'error');
     }
 }
@@ -659,24 +659,24 @@ async function loadDashboardStats() {
         document.getElementById('api-status').textContent = statusText;
         document.getElementById('api-status-indicator').className = 'status-indicator ' + (statusText === 'Online' ? 'online' : 'offline');
         
-        // Try to ping the root to see if server is up but auth is failing or endpoint is wrong
+
         try {
             const pingResp = await fetch(`${BACKEND_URL}/`);
             if (pingResp.ok && statusText === 'Unreachable') {
-                 // Server is up, but /admin/stats failed (likely CORS on that specific route or 404)
+
                  document.getElementById('api-status').textContent = 'Connected (API Error)';
                  showNotification('Server is online, but Admin API failed. Check Secret.', 'warning');
             } else if (!pingResp.ok) {
-                 // Server returned error on root
+
                  console.log('Root ping failed:', pingResp.status);
             }
         } catch (pingErr) {
              console.log('Root ping network error');
         }
 
-        // Show detailed error in notification only if it's not just a connection error
+
         if (statusText !== 'Online') {
-             // Don't spam notifications on interval, maybe just log to console or show once
+
              console.log(`API Error: ${statusText} - ${detailMsg}`);
         }
     }
@@ -833,7 +833,7 @@ function showConfirmationModal(title, message, onConfirm, type = 'danger', confi
     messageEl.textContent = message;
     confirmBtn.textContent = confirmText;
     
-    // Reset classes
+
     confirmBtn.className = 'btn';
     if (type === 'danger') confirmBtn.classList.add('btn-danger');
     else if (type === 'warning') confirmBtn.classList.add('btn-warning');
@@ -914,7 +914,7 @@ function renderRecentActivity(logs) {
             }
         }
         
-        const action = actionTypeMap[actionType] || { name: actionType || 'System Action', color: 'info', icon: '📝' };
+        const action = actionTypeMap[actionType] || { name: actionType || 'System Action', color: 'info', icon: 'ðŸ“' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
         
         const getVal = (val) => (val === undefined || val === null || val === 'undefined' || val === 'null' || val === '') ? null : val;
@@ -1155,7 +1155,7 @@ async function editUser(userId) {
                         <div style="display: flex; gap: 1rem; align-items: center;">
                             <input type="number" id="edit-auto-click-rate" class="form-control" value="${new Decimal(user.auto_click_rate || 0).toFixed(9)}" style="font-family: 'JetBrains Mono', monospace; flex: 1;" step="0.000000001" min="0" max="100">
                             <div id="cps-preview" style="padding: 0.5rem 1rem; background: var(--bg-darker); border-radius: 6px; font-size: 0.85rem; color: var(--success); font-weight: 600; min-width: 140px; text-align: center;">
-                                ≈ ${(new Decimal(user.auto_click_rate || 0).times(60)).toFixed(6)} / min
+                                â‰ˆ ${(new Decimal(user.auto_click_rate || 0).times(60)).toFixed(6)} / min
                             </div>
                         </div>
                         <p style="font-size: 0.7rem; color: var(--text-dim); mt-1;">Limits: 0.0 to 100.0 CPS. Affects background earnings.</p>
@@ -1242,7 +1242,7 @@ async function editUser(userId) {
         cpsInput.addEventListener('input', (e) => {
             try {
                 const val = new Decimal(e.target.value || 0);
-                cpsPreview.textContent = `≈ ${val.times(60).toFixed(6)} / min`;
+                cpsPreview.textContent = `â‰ˆ ${val.times(60).toFixed(6)} / min`;
                 if (val.gt(100)) cpsPreview.style.color = 'var(--danger)';
                 else cpsPreview.style.color = 'var(--success)';
             } catch (e) {
@@ -1347,7 +1347,7 @@ async function resetAllScores() {
 
     showConfirmationModal(
         'Reset All Scores',
-        `⚠️ WARNING ⚠️\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`,
+        `âš ï¸ WARNING âš ï¸\n\nAre you sure you want to reset ALL user scores to 0?\n\nThis will affect ${totalUsers} users and cannot be undone!`,
         async () => {
             try {
                 showNotification('Resetting all scores...', 'info');
@@ -1502,7 +1502,7 @@ async function resetUserScore(userId) {
 async function deleteUser(userId) {
     showConfirmationModal(
         'Delete User',
-        '⚠️ DANGER ZONE ⚠️\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!',
+        'âš ï¸ DANGER ZONE âš ï¸\n\nAre you absolutely sure you want to PERMANENTLY DELETE this user?\n\nThis action cannot be undone and will remove all user data permanently!',
         async () => {
             try {
                 const response = await fetch(`${BACKEND_URL}/admin/users/${userId}/delete`, {
@@ -2070,7 +2070,7 @@ function renderUserLogsTable(searchTerm = '') {
     }
 
     tbody.innerHTML = userLogs.map(log => {
-        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: 'ðŸ“' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
         const userInfo = formatUserInfo({
@@ -2146,7 +2146,7 @@ function renderAdminLogsTable(searchTerm = '') {
     }
 
     tbody.innerHTML = adminLogs.map(log => {
-        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: '📝' };
+        const action = actionTypeMap[log.action_type] || { name: log.action_type, color: 'info', icon: 'ðŸ“' };
         const badgeClass = action.color ? `action-badge ${action.color}` : 'action-badge';
 
         const adminData = {
@@ -2494,7 +2494,7 @@ function setupEventListeners() {
     document.getElementById('close-create-task-modal')?.addEventListener('click', () => closeModal('create-task-modal'));
     document.getElementById('cancel-create-task')?.addEventListener('click', () => closeModal('create-task-modal'));
     document.getElementById('confirm-create-task')?.addEventListener('click', createTask);
-    // Skins admin controls
+
     document.getElementById('create-skin-btn')?.addEventListener('click', () => openSkinModal());
     document.getElementById('refresh-skins-btn')?.addEventListener('click', loadSkinsAdmin);
     document.getElementById('close-skin-modal')?.addEventListener('click', closeSkinModal);
@@ -2788,7 +2788,7 @@ async function handleQuickSearch(query) {
                 type: 'USER',
                 id: u.user_id,
                 title: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username || 'Anonymous',
-                subtitle: `@${u.username || 'no_username'} • ID: ${u.user_id}`,
+                subtitle: `@${u.username || 'no_username'} â€¢ ID: ${u.user_id}`,
                 icon: 'user',
                 action: () => {
                     showSection('users');
@@ -2956,7 +2956,7 @@ function renderTasksTable() {
     tbody.innerHTML = tasks.map(task => {
         const rewardDisplay = task.reward_type === 'coins' 
             ? `${new Decimal(task.reward_amount).toFixed(9)} coins`
-            : '🎁 Present';
+            : 'ðŸŽ Present';
             
         return `
         <tr>
@@ -3024,7 +3024,7 @@ async function createTask() {
         closeModal('create-task-modal');
         loadTasks();
         
-        // Reset form
+
         document.getElementById('task-title').value = '';
         document.getElementById('task-description').value = '';
         document.getElementById('task-target').value = '';
@@ -3078,3 +3078,4 @@ window.loadSkinsAdmin = loadSkinsAdmin;
 window.openSkinModal = openSkinModal;
 window.saveSkin = saveSkin;
 window.deleteSkin = deleteSkin;
+
