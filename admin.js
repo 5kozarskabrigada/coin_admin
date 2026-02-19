@@ -115,7 +115,8 @@ function renderSkinsAdminTable(skins) {
     tbody.innerHTML = skins.map(skin => {
         const priceDisplay = skin.price ? new Decimal(skin.price).toFixed(9) : (skin.task_id ? 'Task Reward' : 'Free');
         const active = skin.is_active ? 'Yes' : 'No';
-        const img = skin.image_url ? `<img src="${escapeHtml(skin.image_url)}" alt="${escapeHtml(skin.name)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;">` : '';
+        const imgSrc = skin.image_url ? escapeHtml(skin.image_url) : 'https://via.placeholder.com/48?text=No+Image';
+        const img = `<img src="${imgSrc}" alt="${escapeHtml(skin.name)}" style="width:48px;height:48px;object-fit:cover;border-radius:6px;" onerror="this.src='https://via.placeholder.com/48?text=No+Image'">`;
 
         return `
         <tr data-name="${escapeHtml(skin.name || '')}" data-image-url="${escapeHtml(skin.image_url || '')}" data-price="${escapeHtml(String(skin.price || ''))}" data-task-id="${escapeHtml(String(skin.task_id || ''))}" data-active="${skin.is_active}">
@@ -165,6 +166,15 @@ function openSkinModal(skin = null) {
     if (srcEl) srcEl.value = source;
     toggleSkinFields(source);
     document.getElementById('skin-modal').classList.add('active');
+
+    // update preview
+    const previewImg = document.getElementById('skin-preview-img');
+    const previewInfo = document.getElementById('skin-preview-info');
+    if (previewImg) {
+        previewImg.src = skin?.image_url || 'https://via.placeholder.com/96?text=Preview';
+        previewImg.onerror = () => { previewImg.src = 'https://via.placeholder.com/96?text=No+Image'; };
+    }
+    if (previewInfo) previewInfo.textContent = skin?.image_url ? 'Preview loaded' : 'Enter an image URL to preview';
 }
 
 function closeSkinModal() {
@@ -189,6 +199,22 @@ function toggleSkinFields(mode) {
 document.addEventListener('DOMContentLoaded', () => {
     const src = document.getElementById('skin-source');
     if (src) src.addEventListener('change', (e) => toggleSkinFields(e.target.value));
+    const imageInput = document.getElementById('skin-image-url');
+    const previewImg = document.getElementById('skin-preview-img');
+    const previewInfo = document.getElementById('skin-preview-info');
+    if (imageInput && previewImg) {
+        imageInput.addEventListener('input', (e) => {
+            const v = e.target.value.trim();
+            if (!v) {
+                previewImg.src = 'https://via.placeholder.com/96?text=Preview';
+                if (previewInfo) previewInfo.textContent = 'Enter an image URL to preview';
+                return;
+            }
+            previewImg.src = v;
+            previewImg.onerror = () => { previewImg.src = 'https://via.placeholder.com/96?text=No+Image'; if (previewInfo) previewInfo.textContent = 'Failed to load'; };
+            previewImg.onload = () => { if (previewInfo) previewInfo.textContent = 'Preview loaded'; };
+        });
+    }
 });
 
 async function saveSkin() {
